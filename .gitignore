@@ -1,0 +1,14 @@
+/.vscode/
+/node_modules/
+/Reparatur-app/node_modules/
+
+# Python cache files
+__pycache__/
+*.pyc
+.env
+.DS_Store
+*.log
+*.sqlite3
+*.db
+*.sqlite
+

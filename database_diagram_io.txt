@@ -1,0 +1,79 @@
+# Database Schema for diagram.io
+
+## Copy and paste this into diagram.io:
+
+```
+erDiagram
+    USERS {
+        uuid id PK
+        varchar username UK
+        varchar password
+    }
+    
+    UPLOADED_PDFS {
+        uuid id PK
+        varchar title
+        bytea content
+        integer file_size
+        timestamptz uploaded_at
+        uuid user_id FK
+    }
+    
+    DOCUMENT_CHUNKS {
+        uuid id PK
+        uuid document_id FK
+        text content
+        vector embedding
+    }
+    
+    CHAT_MESSAGES {
+        uuid id PK
+        uuid user_id FK
+        uuid document_id FK
+        varchar role
+        text message
+        timestamptz created_at
+    }
+    
+    USERS ||--o{ UPLOADED_PDFS : "uploads"
+    USERS ||--o{ CHAT_MESSAGES : "sends"
+    UPLOADED_PDFS ||--o{ DOCUMENT_CHUNKS : "contains"
+    UPLOADED_PDFS ||--o{ CHAT_MESSAGES : "referenced_in"
+```
+
+## Instructions:
+1. Go to https://app.diagrams.net/ (diagram.io)
+2. Click "Create New Diagram"
+3. Choose "Mermaid" as the diagram type
+4. Paste the code above into the editor
+5. The diagram will render automatically
+
+## Alternative - Direct Link:
+You can also use this direct link to create the diagram:
+https://app.diagrams.net/?mode=mermaid
+
+## Table Descriptions:
+
+**USERS**
+- Stores user authentication information
+- Primary key: id (UUID)
+- Unique constraint: username
+
+**UPLOADED_PDFS** 
+- Stores PDF files and metadata
+- Primary key: id (UUID)
+- Foreign key: user_id → users.id (CASCADE DELETE)
+- Contains binary PDF content
+
+**DOCUMENT_CHUNKS**
+- Stores text chunks with vector embeddings for RAG
+- Primary key: id (UUID) 
+- Foreign key: document_id → uploaded_pdfs.id (CASCADE DELETE)
+- Vector embeddings (384 dimensions) for semantic search
+
+**CHAT_MESSAGES**
+- Stores conversation history
+- Primary key: id (UUID)
+- Foreign keys: user_id → users.id, document_id → uploaded_pdfs.id
+- Role-based messages ("user" or "assistant")
+- Optional document reference for context
