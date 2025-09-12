@@ -5,12 +5,37 @@ from sqlalchemy import select
 from uuid import UUID
 
 from api.routers.dependencies import db_dependency
-from api.service.rag import process_question
+from api.service.rag import process_question, ask_gemma3
 from api.database.table_models import ChatMessage
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+@router.get("/general")
+async def general_chat(question: str, user_id: UUID, db: AsyncSession = Depends(db_dependency)):
+    """
+    General chatbot endpoint (no document required).
+    """
+    try:
+        # Call Gemma without PDF context
+        response = ask_gemma3(question, context="")
+        answer = response.get("answer", "No answer")
+
+        # Save chat history (no document_id needed here)
+        user_msg = ChatMessage(user_id=user_id, role="user", message=question)
+        assistant_msg = ChatMessage(user_id=user_id, role="assistant", message=answer)
+
+        db.add_all([user_msg, assistant_msg])
+        await db.commit()
+
+        return {"question": question, "answer": answer}
+
+    except Exception as e:
+        logger.error(f"❌ General chat error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"General chat error: {str(e)}")
+
 
 @router.get("/history")
 async def get_chat_history(
@@ -22,7 +47,6 @@ async def get_chat_history(
     Endpoint: /chat/history
     - Returns all previous chat messages for a given user.
     - If document_id is provided, filter by document as well.
-    - Helps restore chat history after logout/login.
     """
     try:
         query = select(ChatMessage).where(ChatMessage.user_id == user_id)
@@ -48,6 +72,7 @@ async def get_chat_history(
         logger.error(f"❌ Error fetching chat history: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch chat history")
 
+
 @router.get("/")
 async def chat_with_pdf(
     question: str = Query(..., description="User question"),
@@ -72,7 +97,5 @@ async def chat_with_pdf(
         )
         return result
     except Exception as e:
-        logger.error(f"❌ Chat error: {str(e)}")
+        logger.error(f"❌ Chat with PDF error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
-
-

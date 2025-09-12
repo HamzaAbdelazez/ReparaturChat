@@ -1,12 +1,15 @@
 import logging
-
+import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException  # ✅ use FastAPI's HTTPException
+from fastapi import HTTPException
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from api.database.repository.uploaded_pdf import UploadedPdfRepository
 from api.database.table_models import UploadedPdf
 from api.models.uploaded_pdf import UploadedPdfIn, UploadedPdfOut
+
+# NEW: import the extraction function (you'll add this in service/tools_parts.py)
+# from api.service.tools_parts import extract_tools_parts_from_doc  
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,7 @@ class UploadedPdfService:
         """
         Save a new PDF in the database using the repository layer.
         Returns a response model with the saved PDF metadata.
+        Also triggers background extraction of tools & parts (US3).
         """
         try:
             new_pdf = await self.repo.create(
@@ -29,10 +33,22 @@ class UploadedPdfService:
                     user_id=uploaded_pdf_in.user_id,
                 )
             )
+
+            # OPTIONAL: if you have a chunk/embedding pipeline, call it here first
+            # await process_document_chunks_and_embeddings(new_pdf.id)
+
+            #NEW: kick off tools/parts extraction in the background
+            # try:
+            #     asyncio.create_task(extract_tools_parts_from_doc(str(new_pdf.id)))
+            # except Exception as bg_err:
+            #     # Don't fail the upload if extraction scheduling fails
+            #     logger.warning(
+            #         f"[warn] scheduling tools/parts extraction failed for {new_pdf.id}: {bg_err}"
+            #     )
+
             return self.map_to_response_model(uploaded_pdf=new_pdf)
 
         except HTTPException:
-            # Re-raise HTTP exceptions so FastAPI can handle them properly
             raise
         except Exception as e:
             logger.error(f" Error creating {self.repo.model.__name__}: {e}")
@@ -43,9 +59,6 @@ class UploadedPdfService:
 
     @staticmethod
     def map_to_response_model(uploaded_pdf: UploadedPdf) -> UploadedPdfOut:
-        """
-        Convert an UploadedPdf ORM instance into a Pydantic response model.
-        """
         return UploadedPdfOut(
             id=uploaded_pdf.id,
             title=uploaded_pdf.title,

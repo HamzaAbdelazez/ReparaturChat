@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List
 
-from sqlalchemy import String, LargeBinary, DateTime, Integer, ForeignKey, Text, func
+from sqlalchemy import String, LargeBinary, DateTime, Integer, ForeignKey, Text, func, ARRAY
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,6 +66,13 @@ class UploadedPdf(Base):
     chat_messages: Mapped[List["ChatMessage"]] = relationship(
         "ChatMessage", back_populates="document", cascade="all, delete-orphan"
     )
+    # One-to-one: each PDF has one tools/parts record
+    # tools_parts: Mapped["DocumentToolsParts"] = relationship(
+    #     "DocumentToolsParts",
+    #     back_populates="document",
+    #     uselist=False,
+    #     cascade="all, delete-orphan"
+    # )
 
 
 # ================= DOCUMENT CHUNKS =================
@@ -112,10 +119,31 @@ class ChatMessage(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),  # ✅ fix: use timezone.utc
+        default=lambda: datetime.now(timezone.utc),  # store with timezone
         nullable=False
     )
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="chat_messages")
     document: Mapped["UploadedPdf"] = relationship("UploadedPdf", back_populates="chat_messages")
+
+
+# ================= DOCUMENT TOOLS & PARTS =================
+# class DocumentToolsParts(Base):
+#     """Stores required tools & parts for each uploaded PDF."""
+#     __tablename__ = "document_tools_parts"
+
+#     id: Mapped[uuid.UUID] = mapped_column(
+#         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+#     )
+#     document_id: Mapped[uuid.UUID] = mapped_column(
+#         UUID(as_uuid=True),
+#         ForeignKey("uploaded_pdfs.id", ondelete="CASCADE"),
+#         unique=True,  # one record per PDF
+#         nullable=False
+#     )
+#     tools: Mapped[List[str]] = mapped_column(ARRAY(String), default=list, nullable=False)
+#     parts: Mapped[List[str]] = mapped_column(ARRAY(String), default=list, nullable=False)
+
+#     # Relationship back to PDF
+#     document: Mapped["UploadedPdf"] = relationship("UploadedPdf", back_populates="tools_parts")

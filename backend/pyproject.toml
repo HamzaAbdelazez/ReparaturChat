@@ -10,7 +10,7 @@ packages = [{ include = "api", from = "src" }]
 [tool.poetry.dependencies]
 python = "^3.10"
 fastapi = "^0.115.0"
-uvicorn = "^0.34.0"
+uvicorn = {extras = ["standard"], version = "^0.35.0"}
 sqlalchemy = "^2.0.41"
 asyncpg = "^0.30.0"
 psycopg2-binary = "^2.9.10"
@@ -24,6 +24,10 @@ passlib = {version = ">=1.7.4", extras = ["bcrypt"]}
 python-multipart = "^0.0.20"
 pgvector = "^0.4.1"
 bcrypt = ">=4.0.1"
+pymupdf = "^1.26.4"
+sentence-transformers = "^5.1.0"
+replicate = "^1.0.7"
+numpy = "1.26.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"

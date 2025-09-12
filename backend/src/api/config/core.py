@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     # === API Tokens ===
     HUGGINGFACE_HUB_TOKEN: Optional[str] = None
     REPLICATE_API_TOKEN: Optional[str] = None
-    GEMMA_API_KEY: Optional[str] = None  # ✅ Required for Gemma 3 integration
+    GEMMA_API_KEY: Optional[str] = None  #  Required for Gemma 3 integration
 
     @model_validator(mode="after")
     def compute_database_url(self):
@@ -70,7 +70,7 @@ class Settings(BaseSettings):
                 f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}",
             )
         else:
-            raise ValueError("❌ Incomplete database configuration.")
+            raise ValueError("Incomplete database configuration.")
         return self
 
     # Tell Pydantic to load variables from `.env`
@@ -79,3 +79,4 @@ class Settings(BaseSettings):
 
 # Load settings globally
 settings = Settings()
+print("DEBUG TOKEN:", settings.REPLICATE_API_TOKEN)
