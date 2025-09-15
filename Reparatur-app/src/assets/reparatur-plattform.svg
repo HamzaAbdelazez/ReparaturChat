@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      .blue { fill: #1f4e95; }
+      .light { fill: #d6e9ff; }
+      .dark { fill: #333333; }
+      .white { fill: #ffffff; }
+      .shadow { fill: #cfcfcf; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#ffffff"/>
+  <circle cx="600" cy="320" r="280" class="light" />
+
+  <!-- Robot -->
+  <g transform="translate(0,0)">
+    <!-- Antennas -->
+    <g>
+      <rect x="560" y="110" width="10" height="60" class="white"/>
+      <circle cx="565" cy="105" r="10" class="blue"/>
+      <rect x="630" y="110" width="10" height="60" class="white"/>
+      <circle cx="635" cy="105" r="10" class="blue"/>
+    </g>
+
+    <!-- Head -->
+    <rect x="540" y="150" width="120" height="140" rx="28" class="white"/>
+    <rect x="555" y="165" width="90" height="110" rx="20" class="dark"/>
+    <!-- Eyes -->
+    <rect x="580" y="205" width="16" height="12" rx="6" fill="#9ff7cf"/>
+    <rect x="608" y="205" width="16" height="12" rx="6" fill="#9ff7cf"/>
+
+    <!-- Neck -->
+    <rect x="585" y="290" width="30" height="28" rx="6" class="shadow"/>
+
+    <!-- Shoulders -->
+    <path d="M460 350 q140 -90 280 0 v70 h-280z" class="white"/>
+    <!-- Arms -->
+    <rect x="430" y="410" width="36" height="150" class="dark"/>
+    <rect x="734" y="410" width="36" height="150" class="dark"/>
+    <!-- Forearms joints -->
+    <circle cx="448" cy="390" r="52" class="shadow"/>
+    <circle cx="752" cy="390" r="52" class="shadow"/>
+    <circle cx="448" cy="570" r="36" class="white"/>
+    <circle cx="752" cy="570" r="36" class="white"/>
+
+    <!-- Laptop -->
+    <rect x="480" y="420" width="240" height="170" rx="22" class="dark"/>
+    <circle cx="600" cy="505" r="12" class="white"/>
+  </g>
+
+  <!-- Main title (smaller and lower) -->
+  <text x="600" y="660" text-anchor="middle"
+        font-family="Inter, Arial, Helvetica, sans-serif"
+        font-size="54" font-weight="700" class="blue">
+    Reparatur Plattform
+  </text>
+
+  <!-- IPE logo bottom-right aligned -->
+  <g transform="translate(800,740)">
+    <text x="0" y="0"
+          font-family="Inter, Arial, Helvetica, sans-serif"
+          font-weight="800" font-size="72" class="blue">IPE</text>
+    <text x="130" y="-22" font-size="28"
+          font-family="Inter, Arial, Helvetica, sans-serif" class="blue">Institut</text>
+    <text x="130" y="8" font-size="28"
+          font-family="Inter, Arial, Helvetica, sans-serif" class="blue">Produkt</text>
+    <text x="130" y="38" font-size="28"
+          font-family="Inter, Arial, Helvetica, sans-serif" class="blue">Engineering</text>
+  </g>
+</svg>

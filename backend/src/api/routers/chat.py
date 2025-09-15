@@ -23,7 +23,7 @@ async def general_chat(question: str, user_id: UUID, db: AsyncSession = Depends(
         response = ask_gemma3(question, context="")
         answer = response.get("answer", "No answer")
 
-        # Save chat history (no document_id needed here)
+        # Save chat history (no document_id here)
         user_msg = ChatMessage(user_id=user_id, role="user", message=question)
         assistant_msg = ChatMessage(user_id=user_id, role="assistant", message=answer)
 
@@ -33,7 +33,7 @@ async def general_chat(question: str, user_id: UUID, db: AsyncSession = Depends(
         return {"question": question, "answer": answer}
 
     except Exception as e:
-        logger.error(f"❌ General chat error: {str(e)}")
+        logger.exception("❌ General chat error")
         raise HTTPException(status_code=500, detail=f"General chat error: {str(e)}")
 
 
@@ -44,9 +44,8 @@ async def get_chat_history(
     db: AsyncSession = Depends(db_dependency),
 ):
     """
-    Endpoint: /chat/history
-    - Returns all previous chat messages for a given user.
-    - If document_id is provided, filter by document as well.
+    Returns all previous chat messages for a given user.
+    If document_id is provided, filter by document as well.
     """
     try:
         query = select(ChatMessage).where(ChatMessage.user_id == user_id)
@@ -60,7 +59,7 @@ async def get_chat_history(
         return [
             {
                 "id": str(msg.id),
-                "role": msg.role,  # "user" or "assistant"
+                "role": msg.role,
                 "message": msg.message,
                 "document_id": str(msg.document_id) if msg.document_id else None,
                 "created_at": msg.created_at,
@@ -69,7 +68,7 @@ async def get_chat_history(
         ]
 
     except Exception as e:
-        logger.error(f"❌ Error fetching chat history: {str(e)}")
+        logger.exception("❌ Error fetching chat history")
         raise HTTPException(status_code=500, detail="Failed to fetch chat history")
 
 
@@ -81,12 +80,11 @@ async def chat_with_pdf(
     db: AsyncSession = Depends(db_dependency),
 ):
     """
-    Endpoint: /chat
-    - Accepts a user question, document_id, and user_id.
-    - Retrieves relevant chunks from the database.
-    - Sends the context + question to Gemma 3 for answering.
-    - Stores the conversation (Q & A) in the database for history.
-    - Returns the model's response.
+    Ask a question about a specific uploaded PDF.
+    - Retrieves relevant chunks from DB (filtered by document_id).
+    - Sends context + question to Gemma 3 for answering.
+    - Stores Q&A in chat history table.
+    - Returns the model's response + elapsed time.
     """
     try:
         result = await process_question(
@@ -95,7 +93,7 @@ async def chat_with_pdf(
             document_id=document_id,
             user_id=user_id,
         )
-        return result
+        return result  # includes "answer", "raw_response", "elapsed_time"
     except Exception as e:
-        logger.error(f"❌ Chat with PDF error: {str(e)}")
+        logger.exception("❌ Chat with PDF error")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")

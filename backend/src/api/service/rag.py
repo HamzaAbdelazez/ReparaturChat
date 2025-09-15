@@ -2,6 +2,7 @@ import uuid
 import fitz  # PyMuPDF
 import logging
 import asyncio
+import time
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -79,19 +80,22 @@ async def store_chunks_in_db(chunks: List[str], document_id: uuid.UUID, db: Asyn
 # ==============================
 # Similarity Search
 # ==============================
-async def search_similar_chunks(query: str, db: AsyncSession, top_k=5) -> List[str]:
-    """Find most relevant chunks from DB for a query."""
+async def search_similar_chunks(query: str, db: AsyncSession, document_id: uuid.UUID, top_k=5) -> List[str]:
+    """Find most relevant chunks for a query inside a specific document."""
     query_embedding = embedding_model.encode([query])[0].tolist()
     embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
     sql = text("""
         SELECT content
         FROM document_chunks
+        WHERE document_id = :document_id
         ORDER BY embedding <-> (:query_embedding)::vector
         LIMIT :top_k
     """)
 
-    result = await db.execute(sql, {"query_embedding": embedding_str, "top_k": top_k})
+    result = await db.execute(
+        sql, {"document_id": str(document_id), "query_embedding": embedding_str, "top_k": top_k}
+    )
     rows = [row[0] for row in result]
     logger.info(f"🔍 Retrieved {len(rows)} relevant chunks")
     return rows
@@ -130,10 +134,7 @@ def _call_gemma(prompt: str, model_slug: str) -> str:
     return _normalize_replicate_output(output)
 
 def ask_gemma3(question: str, context: str = "", stream: bool = False) -> dict:
-    """
-    Ask Gemma-3 a question with optional context.
-    Falls back to smaller model if 27B fails.
-    """
+    """Ask Gemma-3 a question with optional context. Falls back to smaller model if 27B fails."""
     MAX_CONTEXT_CHARS = 4000
     if len(context) > MAX_CONTEXT_CHARS:
         context = context[:MAX_CONTEXT_CHARS]
@@ -190,13 +191,15 @@ async def process_question(
 ):
     """RAG pipeline: search chunks → send to Gemma → save chat → return answer."""
 
+    start_time = time.time()
+
     # Search chunks only for this document
     chunks = await search_similar_chunks(question, db, document_id=document_id)
     context = "\n".join(chunks) if chunks else "No relevant content found in the document."
 
     logger.info(f"📨 Context sent to Gemma (first 200 chars): {context[:200]}...")
 
-    #  Call Gemma with timeout
+    # Call Gemma with timeout
     try:
         response = await ask_gemma3_async(question, context, timeout=180)
     except asyncio.TimeoutError:
@@ -207,12 +210,12 @@ async def process_question(
             "raw_response": None,
         }
 
-    #  Clean up the answer
+    # Clean up the answer
     answer = response.get("answer", "⚠️ No answer")
     answer = answer.replace("<end_of_turn>", "").strip()
     raw_response = response.get("raw_response")
 
-    #  Save chat history
+    # Save chat history
     user_msg = ChatMessage(
         user_id=user_id, document_id=document_id, role="user", message=question
     )
@@ -227,9 +230,12 @@ async def process_question(
     except Exception as e:
         logger.exception(f"❌ Failed to save chat messages: {e}")
 
+    elapsed = time.time() - start_time
+    logger.info(f"⏱️ Total time to get answer: {elapsed:.2f} seconds")
+
     return {
         "question": question,
         "answer": answer,
         "raw_response": raw_response,
+        "elapsed_time": elapsed,
     }
-

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import robotImg from "../assets/image.svg";
+import robotImg from "../assets/reparatur-plattform.svg";
 
 function Signup() {
   const [username, setUsername] = useState("");
