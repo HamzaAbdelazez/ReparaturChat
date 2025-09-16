@@ -80,8 +80,14 @@ async def store_chunks_in_db(chunks: List[str], document_id: uuid.UUID, db: Asyn
 # ==============================
 # Similarity Search
 # ==============================
-async def search_similar_chunks(query: str, db: AsyncSession, document_id: uuid.UUID, top_k=5) -> List[str]:
-    """Find most relevant chunks for a query inside a specific document."""
+async def search_similar_chunks(
+    query: str,
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    user_id: uuid.UUID,
+    top_k=5
+) -> List[str]:
+    """Find most relevant chunks for a query inside a specific document for this user."""
     query_embedding = embedding_model.encode([query])[0].tolist()
     embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
@@ -89,16 +95,23 @@ async def search_similar_chunks(query: str, db: AsyncSession, document_id: uuid.
         SELECT content
         FROM document_chunks
         WHERE document_id = :document_id
+          AND user_id = :user_id
         ORDER BY embedding <-> (:query_embedding)::vector
         LIMIT :top_k
     """)
 
     result = await db.execute(
-        sql, {"document_id": str(document_id), "query_embedding": embedding_str, "top_k": top_k}
+        sql, {
+            "document_id": str(document_id),
+            "user_id": str(user_id),
+            "query_embedding": embedding_str,
+            "top_k": top_k
+        }
     )
     rows = [row[0] for row in result]
-    logger.info(f"🔍 Retrieved {len(rows)} relevant chunks")
+    logger.info(f"🔍 Retrieved {len(rows)} relevant chunks for user {user_id}")
     return rows
+
 
 # ====================================
 # Replicate API Setup
@@ -194,7 +207,7 @@ async def process_question(
     start_time = time.time()
 
     # Search chunks only for this document
-    chunks = await search_similar_chunks(question, db, document_id=document_id)
+    chunks = await search_similar_chunks(question, db, document_id=document_id, user_id=user_id)
     context = "\n".join(chunks) if chunks else "No relevant content found in the document."
 
     logger.info(f"📨 Context sent to Gemma (first 200 chars): {context[:200]}...")

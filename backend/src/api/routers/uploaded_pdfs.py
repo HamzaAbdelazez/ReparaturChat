@@ -58,22 +58,10 @@ async def upload_pdf(
             pre_extracted_text = extract_text_from_pdf_bytes(content_bytes)
             if pre_extracted_text.strip():
                 chunks = chunk_text(pre_extracted_text)
-                await store_chunks_in_db(chunks, new_pdf.id, db)
-            logger.info(f" Stored {len(chunks)} chunks for PDF {new_pdf.id}")
+                await store_chunks_in_db(chunks, new_pdf.id, uuid.UUID(user_id), db)
+                logger.info(f"💾 Stored {len(chunks)} chunks for PDF {new_pdf.id}")
         except Exception as e:
             logger.warning(f"⚠️ Failed to process chunks for {new_pdf.id}: {e}")
-
-        # 4. Schedule background task: extract tools & parts
-        # if background_tasks is not None:
-        #     try:
-        #         background_tasks.add_task(
-        #             extract_tools_parts_from_doc,
-        #             str(new_pdf.id),
-        #             pre_extracted_text or None
-        #         )
-        #         logger.info(f"🛠️ Scheduled tools/parts extraction for {new_pdf.id}")
-        #     except Exception as bg_err:
-        #         logger.warning(f"⚠️ Could not schedule extraction for {new_pdf.id}: {bg_err}")
 
         return UploadedPdfOut.model_validate(new_pdf)
 

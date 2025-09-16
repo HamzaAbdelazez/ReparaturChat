@@ -88,6 +88,8 @@ class DocumentChunk(Base):
         ForeignKey("uploaded_pdfs.id", ondelete="CASCADE"),
         nullable=False
     )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Embedding vector (example: MiniLM-L6-v2 with 384 dimensions)

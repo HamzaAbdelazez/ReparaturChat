@@ -8,7 +8,6 @@ function ReparaturApp() {
   const [file, setFile] = useState(null);
   const [uploadedPdf, setUploadedPdf] = useState(null);
   const [history, setHistory] = useState([]);
-  const [allChats, setAllChats] = useState([]);
   const [userId, setUserId] = useState(null);
   const [uploadStatus, setUploadStatus] = useState("not_uploaded");
   const navigate = useNavigate();
@@ -105,6 +104,35 @@ function ReparaturApp() {
     }
   };
 
+  // Fetch chat history from backend
+  useEffect(() => {
+    if (!userId) return;
+
+    async function loadHistory() {
+      try {
+        let url = `http://localhost:8000/chat/history?user_id=${userId}`;
+        if (uploadedPdf) {
+          url += `&document_id=${uploadedPdf.id}`;
+        }
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setHistory(
+            data.map((msg) => ({
+              id: msg.id,
+              type: msg.role, 
+              content: msg.message,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load chat history", err);
+      }
+    }
+
+    loadHistory();
+  }, [userId, uploadedPdf]);
+
   // Logout
   const handleSignOut = () => {
     localStorage.removeItem("user");
@@ -114,12 +142,9 @@ function ReparaturApp() {
   return (
     <div className="w-screen h-screen flex bg-neutral-100">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 text-white flex flex-col p-4">
+      <div className="w-64 bg-gray-700 text-white flex flex-col p-4">
         <button
-          onClick={() => {
-            if (history.length > 0) setAllChats((p) => [...p, history]);
-            setHistory([]);
-          }}
+          onClick={() => setHistory([])}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm font-semibold"
         >
           <Plus size={16} /> New Chat
@@ -129,16 +154,19 @@ function ReparaturApp() {
           Chat History
         </h2>
         <div className="flex-1 overflow-y-auto space-y-2">
-          {allChats.length === 0 ? (
-            <p className="text-gray-500 text-sm italic">No past chats</p>
+          {history.length === 0 ? (
+            <p className="text-gray-500 text-sm italic">No messages yet</p>
           ) : (
-            allChats.map((chat, idx) => (
+            history.map((msg, idx) => (
               <div
-                key={idx}
-                className="p-2 rounded bg-gray-800 text-sm cursor-pointer hover:bg-gray-700"
-                onClick={() => setHistory(chat)}
+                key={msg.id || idx}
+                className={`p-2 rounded text-sm cursor-pointer ${
+                  msg.type === "user"
+                    ? "bg-blue-500 text-right"
+                    : "bg-gray-400 text-left"
+                }`}
               >
-                {chat[0]?.content.slice(0, 20) || "Conversation"}
+                {msg.content}
               </div>
             ))
           )}
@@ -157,11 +185,11 @@ function ReparaturApp() {
         <div className="w-[80%] max-w-2xl py-6">
           {/* Header */}
           <h1 className="bg-gradient-to-r from-black via-blue-500 to-violet-800 inline-block text-transparent bg-clip-text font-bold text-5xl leading-tight">
-            Hello there,
+            ReparaturApp,
           </h1>
           <br />
           <h1 className="bg-gradient-to-r from-black via-blue-500 to-violet-800 inline-block text-transparent bg-clip-text font-bold text-5xl leading-tight mb-4">
-            How can I help you?
+            Repair Made Simple
           </h1>
 
           <p className="text-blue-600 leading-tight tracking-tight mb-6 text-lg">
@@ -178,7 +206,9 @@ function ReparaturApp() {
             </div>
             <div
               className="group relative grow border border-gray-300 shadow-sm hover:shadow-md hover:bg-neutral-100/30 rounded-xl p-4 transition-all duration-300 cursor-pointer"
-              onClick={(e) => handleSend(e, "What tools do I need for repair?")}
+              onClick={(e) =>
+                handleSend(e, "What tools do I need for repair?")
+              }
             >
               What tools do I need for repair?
             </div>
@@ -232,9 +262,9 @@ function ReparaturApp() {
             </div>
           </div>
 
-          {/* Chat History (on top) */}
+          {/* Chat Box */}
           <div className="bg-white p-4 rounded-xl shadow-md max-h-60 overflow-y-auto mb-6">
-            <h3 className="text-lg font-semibold mb-2">History</h3>
+            <h3 className="text-lg font-semibold mb-2">Chat</h3>
             {history.length === 0 ? (
               <p className="text-gray-500 italic">No messages yet.</p>
             ) : (
