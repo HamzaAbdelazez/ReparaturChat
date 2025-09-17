@@ -6,7 +6,6 @@ import time
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from pgvector.sqlalchemy import Vector
 from sentence_transformers import SentenceTransformer
 from api.database.table_models import DocumentChunk, ChatMessage
 import replicate
@@ -17,7 +16,7 @@ from dotenv import load_dotenv
 # Logging
 # ===================================
 logger = logging.getLogger(__name__)
-logging.getLogger("httpx").setLevel(logging.WARNING)  # suppress verbose polling logs
+logging.getLogger("httpx").setLevel(logging.WARNING)  # suppress verbose logs
 
 # Load environment variables
 load_dotenv()
@@ -45,7 +44,7 @@ def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
     with fitz.open(stream=file_bytes, filetype="pdf") as pdf:
         for page in pdf:
             text += page.get_text()
-    logger.info(" PDF text extracted from bytes")
+    logger.info("PDF text extracted from bytes")
     return text
 
 # =================================
@@ -59,23 +58,24 @@ def chunk_text(text: str, chunk_size=800, chunk_overlap=200) -> List[str]:
         end = start + chunk_size
         chunks.append(text[start:end])
         start += chunk_size - chunk_overlap
-    logger.info(f" Text split into {len(chunks)} chunks")
+    logger.info(f"Text split into {len(chunks)} chunks")
     return chunks
 
 # ==========================================
 # Store Chunks in DB with Embeddings
 # ==========================================
-async def store_chunks_in_db(chunks: List[str], document_id: uuid.UUID, db: AsyncSession):
+async def store_chunks_in_db(chunks: List[str], document_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession):
     """Store text chunks + embeddings into DB."""
     embeddings = embedding_model.encode(chunks, batch_size=32, show_progress_bar=False)
     for chunk, vector in zip(chunks, embeddings):
         db.add(DocumentChunk(
             document_id=document_id,
+            user_id=user_id,
             content=chunk,
             embedding=vector.tolist()
         ))
     await db.commit()
-    logger.info(f" Stored {len(chunks)} chunks in DB")
+    logger.info(f"Stored {len(chunks)} chunks in DB")
 
 # ==============================
 # Similarity Search
@@ -112,19 +112,18 @@ async def search_similar_chunks(
     logger.info(f"🔍 Retrieved {len(rows)} relevant chunks for user {user_id}")
     return rows
 
-
 # ====================================
 # Replicate API Setup
 # ====================================
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 if not REPLICATE_API_TOKEN:
-    raise RuntimeError(" Missing REPLICATE_API_TOKEN. Please set it in your .env file or environment variables")
+    raise RuntimeError("Missing REPLICATE_API_TOKEN. Please set it in your .env file")
 
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-#  Correct model slugs
+# Model slugs
 GEMMA_MODEL_27B = "google-deepmind/gemma-3-27b-it:c0f0aebe8e578c15a7531e08a62cf01206f5870e9d0a67804b8152822db58c54"
-GEMMA_MODEL_7B = "google-deepmind/gemma-3-7b-it"  # fallback model
+GEMMA_MODEL_7B = "google-deepmind/gemma-3-7b-it"  # fallback
 
 # ====================================
 # Replicate Helpers
@@ -239,7 +238,7 @@ async def process_question(
     try:
         db.add_all([user_msg, assistant_msg])
         await db.commit()
-        logger.info(" Chat messages saved")
+        logger.info("Chat messages saved")
     except Exception as e:
         logger.exception(f"❌ Failed to save chat messages: {e}")
 
