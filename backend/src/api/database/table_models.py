@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List
 
-from sqlalchemy import String, LargeBinary, DateTime, Integer, ForeignKey, Text, func
+from sqlalchemy import String, LargeBinary, DateTime, Integer, ForeignKey, Text, func, ARRAY , Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,6 +66,17 @@ class UploadedPdf(Base):
     chat_messages: Mapped[List["ChatMessage"]] = relationship(
         "ChatMessage", back_populates="document", cascade="all, delete-orphan"
     )
+    tools: Mapped[List["DocumentTool"]] = relationship(
+    "DocumentTool", back_populates="document", cascade="all, delete-orphan"
+)
+
+    # One-to-one: each PDF has one tools/parts record
+    # tools_parts: Mapped["DocumentToolsParts"] = relationship(
+    #     "DocumentToolsParts",
+    #     back_populates="document",
+    #     uselist=False,
+    #     cascade="all, delete-orphan"
+    # )
 
 
 # ================= DOCUMENT CHUNKS =================
@@ -81,6 +92,8 @@ class DocumentChunk(Base):
         ForeignKey("uploaded_pdfs.id", ondelete="CASCADE"),
         nullable=False
     )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Embedding vector (example: MiniLM-L6-v2 with 384 dimensions)
@@ -112,10 +125,53 @@ class ChatMessage(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),  # ✅ fix: use timezone.utc
+        default=lambda: datetime.now(timezone.utc),  # store with timezone
         nullable=False
     )
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="chat_messages")
     document: Mapped["UploadedPdf"] = relationship("UploadedPdf", back_populates="chat_messages")
+
+
+# ================= DOCUMENT TOOLS & PARTS =================
+
+#     """Stores required tools & parts for each uploaded PDF."""
+
+class Tool(Base):
+    """Tools table - stores info about tools, prices, and reusability."""
+    __tablename__ = "tools"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    name: Mapped[str] = mapped_column(String(length=255), nullable=False, unique=True)
+    description: Mapped[str] = mapped_column(String(length=500), nullable=True)
+
+    # lowest price in EUR (or another currency)
+    min_price: Mapped[float] = mapped_column(Float, nullable=True)
+    max_price: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # how reusable is this tool? (e.g., number of times, or score)
+reusability_score: Mapped[int] = mapped_column(Integer, nullable=True)  
+        # Example: 1 = one-time use, 5 = reusable many times
+    
+    
+class DocumentTool(Base):
+        # Mapping table between documents and required tools
+        
+        __tablename__ = "document_tools"
+    
+        id: Mapped[uuid.UUID] = mapped_column(
+            UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        )
+        document_id: Mapped[uuid.UUID] = mapped_column(
+            UUID(as_uuid=True), ForeignKey("uploaded_pdfs.id", ondelete="CASCADE"), nullable=False
+        )
+        tool_id: Mapped[uuid.UUID] = mapped_column(
+            UUID(as_uuid=True), ForeignKey("tools.id", ondelete="CASCADE"), nullable=False
+        )
+    
+        # relationships
+        document: Mapped["UploadedPdf"] = relationship("UploadedPdf", back_populates="tools")
+        tool: Mapped["Tool"] = relationship("Tool")

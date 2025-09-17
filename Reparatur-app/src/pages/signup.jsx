@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import robotImg from "../assets/reparatur-plattform.svg";
 
 function Signup() {
   const [username, setUsername] = useState("");
@@ -23,9 +24,7 @@ function Signup() {
     try {
       const response = await fetch("http://localhost:8000/users/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
@@ -34,9 +33,8 @@ function Signup() {
         throw new Error(data.detail || "Failed to create user");
       }
 
-      // User created successfully
       alert("Signup successful! You can now login.");
-      navigate("/"); // redirect to login page
+      navigate("/"); // redirect to login
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,61 +43,100 @@ function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        onSubmit={handleSignup}
-        className="bg-white p-6 rounded-lg shadow-md w-80 space-y-4"
-      >
-        <h2 className="text-xl font-bold text-center text-blue-600">Sign Up</h2>
+    <div className="bg-gray-400 h-screen w-screen flex items-center justify-center px-4">
+      <div className="flex rounded-lg shadow-lg w-full sm:w-3/4 lg:w-1/2 bg-white">
+        {/* Left column - form */}
+        <div className="flex flex-col w-full md:w-1/2 p-6">
+          <div className="flex flex-col flex-1 justify-center">
+            <h1 className="text-3xl text-center font-thin mb-6">
+              Create Account
+            </h1>
 
-        {error && (
-          <p className="text-red-600 text-center text-sm font-medium">{error}</p>
-        )}
+            {error && (
+              <p className="text-red-600 text-center text-sm mb-3">{error}</p>
+            )}
 
-        <input
-          type="text"
-          placeholder="Username"
-          className="w-full border p-2 rounded"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
+            <form
+              onSubmit={handleSignup}
+              className="form-horizontal w-3/4 mx-auto"
+            >
+              {/* Username */}
+              <div className="flex flex-col mt-4">
+                <input
+                  id="username"
+                  type="text"
+                  className="flex-grow h-10 px-3 border rounded border-gray-400 focus:outline-none focus:border-gray-500"
+                  name="username"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full border p-2 rounded"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+              {/* Password */}
+              <div className="flex flex-col mt-4">
+                <input
+                  id="password"
+                  type="password"
+                  className="flex-grow h-10 px-3 border rounded border-gray-400 focus:outline-none focus:border-gray-500"
+                  name="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-        <input
-          type="password"
-          placeholder="Confirm Password"
-          className="w-full border p-2 rounded"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-        />
+              {/* Confirm Password */}
+              <div className="flex flex-col mt-4">
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  className="flex-grow h-10 px-3 border rounded border-gray-400 focus:outline-none focus:border-gray-500"
+                  name="confirmPassword"
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-        <p className="text-sm text-center">
-          Already have an account?{" "}
-          <Link to="/" className="text-blue-600 hover:underline">
-            Login
-          </Link>
-        </p>
+              {/* Button */}
+              <div className="flex flex-col mt-8">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded ${
+                    loading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {loading ? "Signing up..." : "Sign Up"}
+                </button>
+              </div>
+            </form>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full py-2 rounded text-white ${
-            loading ? "bg-blue-300" : "bg-blue-700 hover:bg-blue-500"
-          }`}
-        >
-          {loading ? "Signing up..." : "Sign Up"}
-        </button>
-      </form>
+            {/* Links */}
+            <div className="text-center mt-4">
+              <Link
+                to="/"
+                className="no-underline hover:underline text-blue-500 text-xs"
+              >
+                Already have an account? Login
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Right column - robot image */}
+        <div className="hidden md:flex md:w-1/2 items-center justify-center bg-gray-100 rounded-r-lg">
+          <img
+            src={robotImg}
+            alt="Repair Bot"
+            className="max-h-full max-w-full object-contain p-6"
+          />
+        </div>
+      </div>
     </div>
   );
 }
