@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from api.config.db import get_db
 from api.models import document_tool as schemas
+from api.models import tool as tool_schemas
 from api.database.repository import document_tool as repository
 import uuid
 
@@ -14,7 +15,7 @@ router = APIRouter(
 def add_tool_to_document(document_id: uuid.UUID, tool_id: uuid.UUID, db: Session = Depends(get_db)):
     return repository.add_tool_to_document(db, document_id, tool_id)
 
-@router.get("/{document_id}/tools", response_model=list[schemas.DocumentToolRead])
+@router.get("/{document_id}/tools", response_model=list[tool_schemas.ToolRead])
 def get_tools_for_document(document_id: uuid.UUID, db: Session = Depends(get_db)):
     return repository.get_tools_for_document(db, document_id)
 

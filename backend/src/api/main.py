@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import routers
-from api.routers import users, uploaded_pdfs, chat , tools , document_chunks , document_tools 
+from api.routers import users, uploaded_pdfs, chat ,tools , document_chunks , document_tools , documents, devices, repair_analysis, tool_pricing, conversations, document_tools_simple
 from api.config.db import init_db_tables
 
 
@@ -45,12 +45,18 @@ app.include_router(chat.router)
 app.include_router(document_chunks.router)
 app.include_router(tools.router)
 app.include_router(document_tools.router)
+app.include_router(document_tools_simple.router)  # Add simple endpoint for frontend compatibility
+app.include_router(documents.router)
+app.include_router(devices.router)
+app.include_router(repair_analysis.router)
+app.include_router(tool_pricing.router)
+app.include_router(conversations.router)
 
 # ------------------------------------------------------
 # Startup event: initialize database tables asynchronously
 # ------------------------------------------------------
 @app.on_event("startup")
-async def on_startup():
+def on_startup():
     logger.info("Initializing database tables")
-    await init_db_tables()   # Async database initialization
-    logger.info("Database tables initialized successfully")
+    init_db_tables()
+

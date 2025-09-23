@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException
@@ -38,6 +39,11 @@ class UserService:
                 instance=User(
                     username=user_in.username,
                     password=hash_password(user_in.password),
+                    skill_level=user_in.skill_level,
+                    physical_strength=user_in.physical_strength,
+                    available_space=user_in.available_space,
+                    experience_level=user_in.experience_level,
+                    profile_updated_at=datetime.now(timezone.utc)
                 )
             )
             return self.map_to_response_user_out_model(user=new_user)
@@ -70,6 +76,11 @@ class UserService:
         return UserOut(
             id=user.id,
             username=user.username,
+            skill_level=user.skill_level,
+            physical_strength=user.physical_strength,
+            available_space=user.available_space,
+            experience_level=user.experience_level,
+            profile_updated_at=user.profile_updated_at
         )
 
     @staticmethod
@@ -77,4 +88,8 @@ class UserService:
         return UserLoginOut(
             id=user.id,
             username=user.username,
+            skill_level=user.skill_level,
+            physical_strength=user.physical_strength,
+            available_space=user.available_space,
+            experience_level=user.experience_level
         )

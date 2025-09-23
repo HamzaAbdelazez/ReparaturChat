@@ -79,4 +79,3 @@ class Settings(BaseSettings):
 
 # Load settings globally
 settings = Settings()
-print("DEBUG TOKEN:", settings.REPLICATE_API_TOKEN)

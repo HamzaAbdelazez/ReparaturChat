@@ -6,6 +6,10 @@ function Signup() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [skillLevel, setSkillLevel] = useState(1);
+  const [physicalStrength, setPhysicalStrength] = useState(3);
+  const [availableSpace, setAvailableSpace] = useState(3);
+  const [experienceLevel, setExperienceLevel] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -25,7 +29,14 @@ function Signup() {
       const response = await fetch("http://localhost:8000/users/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          username, 
+          password, 
+          skill_level: skillLevel,
+          physical_strength: physicalStrength,
+          available_space: availableSpace,
+          experience_level: experienceLevel
+        }),
       });
 
       if (!response.ok) {
@@ -100,6 +111,75 @@ function Signup() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                 />
+              </div>
+
+              {/* Profile Section */}
+              <div className="mt-6 border-t pt-4">
+                <h3 className="text-lg font-medium mb-4 text-center">Your Skills & Preferences</h3>
+                
+                {/* Skill Level */}
+                <div className="flex flex-col mt-3">
+                  <label className="text-sm font-medium text-gray-700 mb-1">Overall Skill Level</label>
+                  <select
+                    value={skillLevel}
+                    onChange={(e) => setSkillLevel(parseInt(e.target.value))}
+                    className="h-10 px-3 border rounded border-gray-400 focus:outline-none focus:border-gray-500"
+                  >
+                    <option value={1}>1 - Beginner</option>
+                    <option value={2}>2 - Novice</option>
+                    <option value={3}>3 - Intermediate</option>
+                    <option value={4}>4 - Advanced</option>
+                    <option value={5}>5 - Expert</option>
+                  </select>
+                </div>
+
+                {/* Physical Strength */}
+                <div className="flex flex-col mt-3">
+                  <label className="text-sm font-medium text-gray-700 mb-1">Physical Strength</label>
+                  <select
+                    value={physicalStrength}
+                    onChange={(e) => setPhysicalStrength(parseInt(e.target.value))}
+                    className="h-10 px-3 border rounded border-gray-400 focus:outline-none focus:border-gray-500"
+                  >
+                    <option value={1}>1 - Limited</option>
+                    <option value={2}>2 - Light work</option>
+                    <option value={3}>3 - Moderate</option>
+                    <option value={4}>4 - Strong</option>
+                    <option value={5}>5 - Very strong</option>
+                  </select>
+                </div>
+
+                {/* Available Space */}
+                <div className="flex flex-col mt-3">
+                  <label className="text-sm font-medium text-gray-700 mb-1">Available Workspace</label>
+                  <select
+                    value={availableSpace}
+                    onChange={(e) => setAvailableSpace(parseInt(e.target.value))}
+                    className="h-10 px-3 border rounded border-gray-400 focus:outline-none focus:border-gray-500"
+                  >
+                    <option value={1}>1 - Very limited</option>
+                    <option value={2}>2 - Small space</option>
+                    <option value={3}>3 - Moderate</option>
+                    <option value={4}>4 - Large space</option>
+                    <option value={5}>5 - Workshop/Garage</option>
+                  </select>
+                </div>
+
+                {/* Experience Level */}
+                <div className="flex flex-col mt-3">
+                  <label className="text-sm font-medium text-gray-700 mb-1">Repair Experience</label>
+                  <select
+                    value={experienceLevel}
+                    onChange={(e) => setExperienceLevel(parseInt(e.target.value))}
+                    className="h-10 px-3 border rounded border-gray-400 focus:outline-none focus:border-gray-500"
+                  >
+                    <option value={1}>1 - No experience</option>
+                    <option value={2}>2 - Few repairs</option>
+                    <option value={3}>3 - Some experience</option>
+                    <option value={4}>4 - Experienced</option>
+                    <option value={5}>5 - Very experienced</option>
+                  </select>
+                </div>
               </div>
 
               {/* Button */}

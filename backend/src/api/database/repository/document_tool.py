@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from api.database.table_models import DocumentTool
+from api.database.table_models import DocumentTool, Tool
 from api.models import document_tool as schemas
 
 def add_tool_to_document(db: Session, document_id: str, tool_id: str):
@@ -10,7 +10,7 @@ def add_tool_to_document(db: Session, document_id: str, tool_id: str):
     return mapping
 
 def get_tools_for_document(db: Session, document_id: str):
-    return db.query(DocumentTool).filter(DocumentTool.document_id == document_id).all()
+    return db.query(Tool).join(DocumentTool).filter(DocumentTool.document_id == document_id).all()
 
 def remove_tool_from_document(db: Session, document_id: str, tool_id: str):
     mapping = db.query(DocumentTool).filter(

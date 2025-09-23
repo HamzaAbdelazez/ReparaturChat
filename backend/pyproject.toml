@@ -28,6 +28,7 @@ pymupdf = "^1.26.4"
 sentence-transformers = "^5.1.0"
 replicate = "^1.0.7"
 numpy = "1.26.4"
+aiohttp = "^3.12.15"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"

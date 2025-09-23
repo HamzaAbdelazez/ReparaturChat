@@ -85,7 +85,7 @@ async def search_similar_chunks(
     db: AsyncSession,
     document_id: uuid.UUID,
     user_id: uuid.UUID,
-    top_k=5
+    top_k=3
 ) -> List[str]:
     """Find most relevant chunks for a query inside a specific document for this user."""
     query_embedding = embedding_model.encode([query])[0].tolist()
@@ -121,9 +121,9 @@ if not REPLICATE_API_TOKEN:
 
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-# Model slugs
-GEMMA_MODEL_27B = "google-deepmind/gemma-3-27b-it:c0f0aebe8e578c15a7531e08a62cf01206f5870e9d0a67804b8152822db58c54"
-GEMMA_MODEL_7B = "google-deepmind/gemma-3-7b-it"  # fallback
+# Model slugs - Use smaller, faster model by default
+GEMMA_MODEL_7B = "google-deepmind/gemma-2-9b-it"  # faster primary model
+GEMMA_MODEL_27B = "google-deepmind/gemma-2-27b-it"  # fallback for complex queries
 
 # ====================================
 # Replicate Helpers
@@ -146,28 +146,32 @@ def _call_gemma(prompt: str, model_slug: str) -> str:
     return _normalize_replicate_output(output)
 
 def ask_gemma3(question: str, context: str = "", stream: bool = False) -> dict:
-    """Ask Gemma-3 a question with optional context. Falls back to smaller model if 27B fails."""
-    MAX_CONTEXT_CHARS = 4000
+    """Ask Gemma-3 a question with optional context. Uses faster 7B model by default."""
+    MAX_CONTEXT_CHARS = 2000  # Further reduced for faster processing
     if len(context) > MAX_CONTEXT_CHARS:
         context = context[:MAX_CONTEXT_CHARS]
 
-    prompt = f"Context:\n{context}\n\nQuestion: {question}\nAnswer:"
+    # Shorter, more direct prompt for faster responses
+    if context.strip():
+        prompt = f"Based on this context: {context}\n\nQuestion: {question}\nProvide a concise answer:"
+    else:
+        prompt = f"Question: {question}\nProvide a helpful answer:"
 
     try:
         if stream:
             answer_chunks = []
-            for event in replicate.stream(GEMMA_MODEL_27B, input={"prompt": prompt}):
+            for event in replicate.stream(GEMMA_MODEL_7B, input={"prompt": prompt}):
                 if event.event == "output":
                     answer_chunks.append(str(event.data))
             answer_text = "".join(answer_chunks).strip()
             return {"answer": answer_text, "raw_response": answer_chunks}
 
-        # Blocking mode with fallback
+        # Use faster 7B model first, fallback to 27B only for complex cases
         try:
-            answer_text = _call_gemma(prompt, GEMMA_MODEL_27B)
-        except Exception as e:
-            logger.warning(f"⚠️ Gemma-27B failed, retrying with 7B: {e}")
             answer_text = _call_gemma(prompt, GEMMA_MODEL_7B)
+        except Exception as e:
+            logger.warning(f"⚠️ Gemma-7B failed, retrying with 27B: {e}")
+            answer_text = _call_gemma(prompt, GEMMA_MODEL_27B)
 
         if answer_text:
             return {"answer": answer_text.strip(), "raw_response": answer_text}
@@ -178,7 +182,7 @@ def ask_gemma3(question: str, context: str = "", stream: bool = False) -> dict:
         logger.error(f"❌ Gemma API failed: {str(e)}")
         return {"answer": "⚠️ Error contacting Gemma API.", "raw_response": str(e)}
 
-async def ask_gemma3_async(question: str, context: str = "", timeout: int = 500) -> dict:
+async def ask_gemma3_async(question: str, context: str = "", timeout: int = 30) -> dict:
     """Async wrapper with timeout + error handling."""
     try:
         return await asyncio.wait_for(
@@ -213,7 +217,7 @@ async def process_question(
 
     # Call Gemma with timeout
     try:
-        response = await ask_gemma3_async(question, context, timeout=180)
+        response = await ask_gemma3_async(question, context, timeout=60)
     except asyncio.TimeoutError:
         logger.error("⚠️ Gemma request timed out")
         return {
@@ -239,6 +243,101 @@ async def process_question(
         db.add_all([user_msg, assistant_msg])
         await db.commit()
         logger.info("Chat messages saved")
+    except Exception as e:
+        logger.exception(f"❌ Failed to save chat messages: {e}")
+
+    elapsed = time.time() - start_time
+    logger.info(f"⏱️ Total time to get answer: {elapsed:.2f} seconds")
+
+    return {
+        "question": question,
+        "answer": answer,
+        "raw_response": raw_response,
+        "elapsed_time": elapsed,
+    }
+
+# ===================================================
+# SYNC VERSIONS FOR COMPATIBILITY
+# ===================================================
+
+def search_similar_chunks_sync(
+    query: str,
+    db,  # Sync Session
+    document_id: uuid.UUID,
+    user_id: uuid.UUID,
+    top_k=5
+) -> List[str]:
+    """Sync version: Find most relevant chunks for a query inside a specific document for this user."""
+    query_embedding = embedding_model.encode([query])[0].tolist()
+    embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+
+    sql = text("""
+        SELECT content
+        FROM document_chunks
+        WHERE document_id = :document_id
+          AND user_id = :user_id
+        ORDER BY embedding <-> (:query_embedding)::vector
+        LIMIT :top_k
+    """)
+
+    result = db.execute(
+        sql, {
+            "document_id": str(document_id),
+            "user_id": str(user_id),
+            "query_embedding": embedding_str,
+            "top_k": top_k
+        }
+    )
+    rows = [row[0] for row in result]
+    logger.info(f"🔍 Retrieved {len(rows)} relevant chunks for user {user_id}")
+    return rows
+
+def process_question(
+    question: str,
+    db,  # Sync Session
+    document_id: uuid.UUID,
+    user_id: uuid.UUID
+):
+    """Sync version: RAG pipeline: search chunks → send to Gemma → save chat → return answer."""
+
+    start_time = time.time()
+
+    # Search chunks only for this document
+    chunks = search_similar_chunks_sync(question, db, document_id=document_id, user_id=user_id)
+    context = "\n".join(chunks) if chunks else "No relevant content found in the document."
+
+    logger.info(f"📨 Context sent to Gemma (first 200 chars): {context[:200]}...")
+
+    # Call Gemma (sync version) with shorter context for speed
+    try:
+        response = ask_gemma3(question, context)
+    except Exception as e:
+        logger.error(f"⚠️ Gemma request failed: {e}")
+        return {
+            "question": question,
+            "answer": "⚠️ Request failed. Please try again.",
+            "raw_response": None,
+            "elapsed_time": 0,
+        }
+
+    # Clean up the answer
+    answer = response.get("answer", "⚠️ No answer")
+    answer = answer.replace("<end_of_turn>", "").strip()
+    raw_response = response.get("raw_response")
+
+    # Save chat history
+    user_msg = ChatMessage(
+        user_id=user_id, document_id=document_id, role="user", message=question
+    )
+    assistant_msg = ChatMessage(
+        user_id=user_id, document_id=document_id, role="assistant", message=answer
+    )
+
+    try:
+        db.add(user_msg)
+        db.add(assistant_msg)
+        db.commit()
+        logger.info("💾 Chat messages saved to database")
     except Exception as e:
         logger.exception(f"❌ Failed to save chat messages: {e}")
 
