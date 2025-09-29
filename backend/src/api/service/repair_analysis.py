@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class RepairAnalysisService:
-    """Service for repair analysis functionality (US32, US5, US29, US30, US19.2)."""
+    """Service for repair analysis functionality."""
     
     @staticmethod
     async def check_repair_feasibility(
@@ -25,7 +25,7 @@ class RepairAnalysisService:
         document_id: UUID,
         db: AsyncSession
     ) -> RepairFeasibilityResult:
-        """Check if user can feasibly perform the repair (US32)."""
+        """Check if user can feasibly perform the repair."""
         try:
             # Get user profile
             user_result = await db.execute(select(User).where(User.id == user_id))
@@ -84,7 +84,7 @@ class RepairAnalysisService:
         document_id: UUID,
         db: AsyncSession
     ) -> CostEstimation:
-        """Estimate total repair costs including tools and time (US5, US19)."""
+        """Estimate total repair costs including tools and time."""
         try:
             # Get user for skill level adjustment
             user_result = await db.execute(select(User).where(User.id == user_id))
@@ -228,7 +228,7 @@ class RepairAnalysisService:
         user_id: UUID,
         db: AsyncSession
     ) -> ToolReusabilityAnalysis:
-        """Analyze tool reusability for a specific user (US19.2)."""
+        """Analyze tool reusability for a specific user."""
         try:
             tool_result = await db.execute(select(Tool).where(Tool.id == tool_id))
             tool = tool_result.scalar_one_or_none()

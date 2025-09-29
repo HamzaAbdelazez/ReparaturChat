@@ -23,7 +23,7 @@ async def check_repair_feasibility(
     document_id: UUID,
     db = Depends(db_dependency)
 ) -> RepairFeasibilityResult:
-    """Enhanced repair feasibility check (US32)."""
+    """Enhanced repair feasibility check."""
     try:
         service = RepairFeasibilityService(db)
         return await service.analyze_repair_feasibility(user_id, device_id, document_id)
@@ -40,7 +40,7 @@ async def estimate_repair_costs(
     document_id: UUID,
     db = Depends(db_dependency)
 ) -> CostEstimation:
-    """Estimate total repair costs including tools and time (US5, US19)."""
+    """Estimate total repair costs including tools and time."""
     try:
         return await RepairAnalysisService.estimate_repair_costs(
             user_id, document_id, db
@@ -56,7 +56,7 @@ async def estimate_repair_time(
     document_id: UUID,
     db = Depends(db_dependency)
 ) -> TimeEstimation:
-    """Estimate repair time based on user skill level (US5, US30)."""
+    """Estimate repair time based on user skill level."""
     try:
         return await RepairAnalysisService.estimate_repair_time(
             user_id, document_id, db
@@ -73,7 +73,7 @@ async def compare_repair_options(
     document_id: UUID,
     db = Depends(db_dependency)
 ) -> RepairComparison:
-    """Compare self-repair vs professional service (US29, US30)."""
+    """Compare self-repair vs professional service."""
     try:
         return await RepairAnalysisService.compare_repair_options(
             user_id, device_id, document_id, db
@@ -89,7 +89,7 @@ async def analyze_tool_reusability(
     user_id: UUID,
     db = Depends(db_dependency)
 ) -> ToolReusabilityAnalysis:
-    """Enhanced tool reusability analysis (US19.2)."""
+    """Enhanced tool reusability analysis."""
     try:
         service = ToolReusabilityService(db)
         return await service.analyze_tool_reusability(tool_id, user_id)
@@ -106,7 +106,7 @@ async def get_tool_reusability_breakdown(
     user_id: UUID,
     db = Depends(db_dependency)
 ):
-    """Get detailed breakdown of tool reusability factors (US19.2)."""
+    """Get detailed breakdown of tool reusability factors."""
     try:
         service = ToolReusabilityService(db)
         return await service.get_reusability_breakdown(tool_id, user_id)

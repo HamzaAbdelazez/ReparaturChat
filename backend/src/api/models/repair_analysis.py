@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class RepairFeasibilityResult(BaseModel):
-    """Result of repair feasibility analysis for US32."""
+    """Result of repair feasibility analysis."""
     is_feasible: bool
     user_skill_score: int
     required_skill_score: int
@@ -14,7 +14,7 @@ class RepairFeasibilityResult(BaseModel):
 
 
 class CostEstimation(BaseModel):
-    """Cost estimation for repairs - US5, US19, US29."""
+    """Cost estimation for repairs."""
     tools_cost: float
     parts_cost: float
     time_cost: float  # estimated time * hourly rate
@@ -23,7 +23,7 @@ class CostEstimation(BaseModel):
     
 
 class TimeEstimation(BaseModel):
-    """Time estimation for repairs - US5, US30."""
+    """Time estimation for repairs."""
     base_time_hours: float
     user_adjustment_factor: float  # based on skill level
     tool_acquisition_time_hours: float
@@ -31,7 +31,7 @@ class TimeEstimation(BaseModel):
 
 
 class RepairComparison(BaseModel):
-    """Comparison between self-repair and professional service - US29, US30."""
+    """Comparison between self-repair and professional service."""
     self_repair: dict  # cost, time, feasibility
     professional_service: dict  # cost, time, provider info
     recommendation: str  # "self_repair" or "professional"
@@ -40,7 +40,7 @@ class RepairComparison(BaseModel):
 
 
 class ToolReusabilityAnalysis(BaseModel):
-    """Tool reusability analysis for US19.2."""
+    """Tool reusability analysis."""
     tool_id: uuid.UUID
     tool_name: str
     reusability_score: int  # 1-5

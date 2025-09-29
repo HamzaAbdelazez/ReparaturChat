@@ -24,7 +24,7 @@ async def create_device(
     device_data: DeviceIn,
     db: AsyncSession = Depends(db_dependency)
 ):
-    """Create a new device model (US33)."""
+    """Create a new device model."""
     try:
         device = Device(
             manufacturer=device_data.manufacturer,
@@ -59,7 +59,7 @@ async def search_devices(
     category: str = Query(None),
     db: AsyncSession = Depends(db_dependency)
 ):
-    """Search for devices by manufacturer, model, or category (US33)."""
+    """Search for devices by manufacturer, model, or category."""
     try:
         query = select(Device)
         
@@ -95,7 +95,7 @@ async def add_user_device(
     device_data: UserDeviceIn,
     db: AsyncSession = Depends(db_dependency)
 ):
-    """Add a device to user's collection (US33)."""
+    """Add a device to user's collection ."""
     try:
         # Check if user exists
         user_result = await db.execute(select(User).where(User.id == user_id))
@@ -148,7 +148,7 @@ async def get_user_devices(
     user_id: UUID,
     db: AsyncSession = Depends(db_dependency)
 ):
-    """Get all devices owned by a user (US33)."""
+    """Get all devices owned by a user."""
     try:
         query = select(UserDevice).options(selectinload(UserDevice.device)).where(UserDevice.user_id == user_id)
         result = await db.execute(query)
@@ -182,7 +182,7 @@ async def check_warranty(
     user_device_id: UUID,
     db: AsyncSession = Depends(db_dependency)
 ):
-    """Check warranty status for a user device (US34)."""
+    """Check warranty status for a user device."""
     try:
         query = select(UserDevice).options(selectinload(UserDevice.device)).where(UserDevice.id == user_device_id)
         result = await db.execute(query)

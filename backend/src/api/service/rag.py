@@ -122,8 +122,8 @@ if not REPLICATE_API_TOKEN:
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
 # Model slugs - Use smaller, faster model by default
-GEMMA_MODEL_7B = "google-deepmind/gemma-2-9b-it"  # faster primary model
-GEMMA_MODEL_27B = "google-deepmind/gemma-2-27b-it"  # fallback for complex queries
+GEMMA_MODEL_7B = "google-deepmind/gemma-3-27b-it:c0f0aebe8e578c15a7531e08a62cf01206f5870e9d0a67804b8152822db58c54"  # faster primary model
+GEMMA_MODEL_27B = "google-deepmind/gemma-3-27b-it:c0f0aebe8e578c15a7531e08a62cf01206f5870e9d0a67804b8152822db58c54"  # fallback for complex queries
 
 # ====================================
 # Replicate Helpers

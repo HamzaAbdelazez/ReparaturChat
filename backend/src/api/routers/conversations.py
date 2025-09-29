@@ -200,7 +200,7 @@ async def upload_pdf_to_conversation(
     db: AsyncSession = Depends(db_dependency)
 ):
     """
-    Upload a PDF to a conversation (ChatGPT-style).
+    Upload a PDF to a conversation.
     Uses the existing uploaded_pdfs functionality.
     """
     try:

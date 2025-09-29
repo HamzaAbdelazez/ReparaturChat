@@ -18,7 +18,7 @@ async def update_tool_prices(
     background_tasks: BackgroundTasks,
     db = Depends(db_dependency)
 ):
-    """Update tool prices from external sources (US19)."""
+    """Update tool prices from external sources."""
     try:
         service = ToolPricingService(db)
         
@@ -37,7 +37,7 @@ async def get_tool_prices(
     tool_id: UUID,
     db = Depends(db_dependency)
 ):
-    """Get current tool prices from database (US19)."""
+    """Get current tool prices from database."""
     try:
         service = ToolPricingService(db)
         prices = await service.get_tool_prices(tool_id)
@@ -57,7 +57,7 @@ async def get_cheapest_price(
     tool_id: UUID,
     db = Depends(db_dependency)
 ):
-    """Get the cheapest price for a tool (US19)."""
+    """Get the cheapest price for a tool."""
     try:
         service = ToolPricingService(db)
         cheapest = await service.get_cheapest_price(tool_id)
@@ -82,7 +82,7 @@ async def compare_tool_prices(
     tool_ids: List[UUID],
     db = Depends(db_dependency)
 ):
-    """Compare prices across multiple tools (US19)."""
+    """Compare prices across multiple tools."""
     try:
         service = ToolPricingService(db)
         comparison = await service.compare_tool_prices(tool_ids)

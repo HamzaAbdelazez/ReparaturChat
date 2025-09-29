@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class RepairFeasibilityService:
-    """Enhanced service for repair feasibility analysis (US32)."""
+    """Enhanced service for repair feasibility analysis."""
     
     # Skill requirements for different repair types
     REPAIR_TYPE_REQUIREMENTS = {

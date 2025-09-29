@@ -202,7 +202,7 @@ class DocumentTool(Base):
 
 # ================= DEVICES & MODELS =================
 class Device(Base):
-    """Device/Product models table for US33."""
+    """Device/Product models table."""
     __tablename__ = "devices"
     
     id: Mapped[uuid.UUID] = mapped_column(
@@ -210,9 +210,9 @@ class Device(Base):
     )
     manufacturer: Mapped[str] = mapped_column(String(length=255), nullable=False)
     model: Mapped[str] = mapped_column(String(length=255), nullable=False)
-    category: Mapped[str] = mapped_column(String(length=100), nullable=False)  # e.g., "washing machine", "smartphone"
-    warranty_period_months: Mapped[int] = mapped_column(Integer, default=24)  # default 24 months
-    repair_complexity: Mapped[int] = mapped_column(Integer, default=3)  # 1-5 scale for US32
+    category: Mapped[str] = mapped_column(String(length=100), nullable=False)  # e.g., "washing machine"
+    warranty_period_months: Mapped[int] = mapped_column(Integer, default=36)  # default 36 months
+    repair_complexity: Mapped[int] = mapped_column(Integer, default=3)  
     
     # Relationships
     user_devices: Mapped[List["UserDevice"]] = relationship(
@@ -221,7 +221,7 @@ class Device(Base):
 
 
 class UserDevice(Base):
-    """User's owned devices with purchase information for US33 and US34."""
+    """User's owned devices with purchase information."""
     __tablename__ = "user_devices"
     
     id: Mapped[uuid.UUID] = mapped_column(
@@ -261,7 +261,7 @@ class ServiceProvider(Base):
 
 # ================= TOOL PRICING =================
 class ToolPrice(Base):
-    """Tool pricing from different vendors for US19."""
+    """Tool pricing from different vendors."""
     __tablename__ = "tool_prices"
     
     id: Mapped[uuid.UUID] = mapped_column(
