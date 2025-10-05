@@ -2,7 +2,7 @@ import uuid
 import logging
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlalchemy import text, select
 from starlette.status import HTTP_201_CREATED
 
 from api.routers.dependencies import db_dependency
@@ -62,7 +62,7 @@ async def upload_pdf(
                 # Save chunks + embeddings
                 chunks = chunk_text(pre_extracted_text)
                 await store_chunks_in_db(chunks, new_pdf.id, uuid.UUID(user_id), db)
-                logger.info(f"💾 Stored {len(chunks)} chunks for PDF {new_pdf.id}")
+                logger.info(f"[CHUNKS] Stored {len(chunks)} chunks for PDF {new_pdf.id}")
 
                 # 4. Extract tools
                 tools = extract_tools_from_text(pre_extracted_text)
@@ -91,31 +91,63 @@ async def upload_pdf(
                         await db.flush()
                         tool_id = tool.id
                         
-                        # Trigger price fetching in background
-                        try:
-                            from api.service.tool_pricing import ToolPricingService
-                            pricing_service = ToolPricingService(db)
-                            await pricing_service.update_tool_prices(tool_id)
-                            logger.info(f"💰 Updated prices for tool: {tool_name}")
-                        except Exception as price_error:
-                            logger.warning(f"⚠️ Failed to fetch prices for {tool_name}: {price_error}")
+                        # Trigger price fetching in background (optional) - DISABLED FOR NOW
+                        # try:
+                        #     from api.service.tool_pricing import ToolPricingService
+                        #     pricing_service = ToolPricingService(db)
+                        #     await pricing_service.update_tool_prices(tool_id)
+                        #     logger.info(f"[PRICING] Updated prices for tool: {tool_name}")
+                        # except Exception as price_error:
+                        #     logger.warning(f"[PRICING_ERROR] Failed to fetch prices for {tool_name}: {price_error}")
+                        #     # Continue processing even if price fetching fails
+                        logger.info(f"[PRICING] Skipping price fetch for tool: {tool_name} (disabled)")
 
                     # Link tool to this document
                     db.add(DocumentTool(document_id=new_pdf.id, tool_id=tool_id))
 
-                await db.commit()
-                logger.info(f"🔧 Extracted and saved {len(tools)} tools for PDF {new_pdf.id}")
+                try:
+                    await db.commit()
+                    logger.info(f"[TOOLS] Extracted and saved {len(tools)} tools for PDF {new_pdf.id}")
+                except Exception as commit_error:
+                    logger.error(f"[COMMIT_ERROR] Failed to commit tools for PDF {new_pdf.id}: {commit_error}")
+                    await db.rollback()
+                    # Continue without tools - PDF is still saved
 
         except Exception as e:
-            logger.warning(f"⚠️ Failed to process chunks/tools for {new_pdf.id}: {e}")
+            logger.warning(f"[PROCESS_ERROR] Failed to process chunks/tools for {new_pdf.id}: {e}")
+            try:
+                await db.rollback()
+            except Exception:
+                pass  # Ignore rollback errors
 
         return UploadedPdfOut.model_validate(new_pdf)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Upload error: {e}")
+        logger.error(f"[UPLOAD_ERROR] Upload error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected upload error")
+
+
+@router.get("/user/{user_id}", response_model=list[UploadedPdfOut])
+async def get_user_pdfs(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(db_dependency)
+):
+    """
+    Get all uploaded PDFs for a specific user.
+    """
+    try:
+        result = await db.execute(
+            select(UploadedPdf).where(UploadedPdf.user_id == user_id)
+        )
+        pdfs = result.scalars().all()
+        
+        return [UploadedPdfOut.model_validate(pdf) for pdf in pdfs]
+        
+    except Exception as e:
+        logger.error(f"Error getting user PDFs: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.delete("/{document_id}")
@@ -148,7 +180,7 @@ async def delete_pdf(
         await db.delete(pdf_document)
         await db.commit()
         
-        logger.info(f"📄 Deleted PDF {document_id} for user {user_id}")
+        logger.info(f"[DELETE] Deleted PDF {document_id} for user {user_id}")
         
         return {
             "message": "PDF deleted successfully",

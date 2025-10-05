@@ -237,4 +237,4 @@ class ToolReusabilityService:
             
         except Exception as e:
             logger.error(f"Error getting reusability breakdown: {e}")
-            raise
+            raise ValueError(f"Failed to get reusability breakdown: {str(e)}")

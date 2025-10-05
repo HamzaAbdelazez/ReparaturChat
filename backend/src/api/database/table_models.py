@@ -179,6 +179,9 @@ class Tool(Base):
     reusability_score: Mapped[int] = mapped_column(Integer, nullable=True)  
     # Example: 1 = one-time use, 5 = reusable many times
     
+    # tool category for organization
+    category: Mapped[str] = mapped_column(String(length=100), nullable=True)
+    
     
 class DocumentTool(Base):
         # Mapping table between documents and required tools

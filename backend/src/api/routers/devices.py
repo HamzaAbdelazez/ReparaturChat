@@ -91,8 +91,8 @@ async def search_devices(
 
 @router.post("/user-devices/", response_model=UserDeviceOut)
 async def add_user_device(
-    user_id: UUID,
     device_data: UserDeviceIn,
+    user_id: UUID = Query(..., description="User ID"),
     db: AsyncSession = Depends(db_dependency)
 ):
     """Add a device to user's collection ."""

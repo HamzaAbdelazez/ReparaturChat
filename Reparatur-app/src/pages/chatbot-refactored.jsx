@@ -29,7 +29,7 @@ function ReparaturApp() {
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [chatMode, setChatMode] = useState("pdf"); // "pdf" or "general"
+  // Auto-detect chat mode based on PDF presence - no manual selection needed
   const navigate = useNavigate();
 
   // Load user and devices
@@ -56,7 +56,6 @@ function ReparaturApp() {
       setTools([]);
       setRepairAnalysis(null);
       setShowAnalysis(false);
-      setChatMode("pdf");
       
       loadUserDevices(parsed.id);
       loadConversations(parsed.id);
@@ -111,6 +110,15 @@ function ReparaturApp() {
         const newConversation = await response.json();
         setCurrentConversationId(newConversation.id);
         setHistory([]);
+        
+        // Clear conversation-specific state
+        setRepairAnalysis(null);
+        setShowAnalysis(false);
+        setUploadedPdf(null);
+        setUploadStatus("not_uploaded");
+        setTools([]);
+        setFile(null);
+        
         loadConversations(userId);
         return newConversation.id;
       }
@@ -124,11 +132,20 @@ function ReparaturApp() {
   const switchToConversation = async (conversationId) => {
     try {
       setCurrentConversationId(conversationId);
+      
+      // Clear previous conversation state
+      setRepairAnalysis(null);
+      setShowAnalysis(false);
+      
       const response = await fetch(`http://localhost:8000/conversations/${conversationId}/messages`);
       if (response.ok) {
         const messages = await response.json();
+        
+        // Filter out system messages from chat display (but keep them for PDF attachment detection)
+        const chatMessages = messages.filter(msg => msg.type !== 'system');
+        
         setHistory(
-          messages.map((msg) => ({
+          chatMessages.map((msg) => ({
             id: msg.id,
             type: msg.type,
             content: msg.content,
@@ -145,6 +162,14 @@ function ReparaturApp() {
             title: pdfMessage.attachment.filename
           });
           setUploadStatus("uploaded");
+          
+          // Load tools for this PDF
+          loadToolsForPdf(pdfMessage.attachment.id);
+        } else {
+          // Clear PDF-related state if no PDF attachment
+          setUploadedPdf(null);
+          setUploadStatus("not_uploaded");
+          setTools([]);
         }
       }
     } catch (error) {
@@ -176,7 +201,6 @@ function ReparaturApp() {
         setTools([]);
         setRepairAnalysis(null);
         setShowAnalysis(false);
-        setChatMode("pdf");
         
         console.log("PDF deleted successfully");
       } else {
@@ -222,6 +246,44 @@ function ReparaturApp() {
         const data = await response.json();
         setUploadedPdf(data);
         setUploadStatus("uploaded");
+        
+        // Load tools immediately after successful upload
+        loadToolsForPdf(data.id);
+        
+        // If we have a current conversation, save the PDF attachment (only once)
+        if (currentConversationId) {
+          try {
+            // Check if this PDF is already attached to avoid duplicates
+            const existingMessages = await fetch(`http://localhost:8000/conversations/${currentConversationId}/messages`);
+            if (existingMessages.ok) {
+              const messages = await existingMessages.json();
+              const pdfAlreadyAttached = messages.some(msg => 
+                msg.attachment && 
+                msg.attachment.type === 'pdf' && 
+                msg.attachment.id === data.id
+              );
+              
+              if (!pdfAlreadyAttached) {
+                await fetch(`http://localhost:8000/conversations/${currentConversationId}/messages`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    message_type: "system",
+                    content: `PDF uploaded: ${data.title}`,
+                    attachment: {
+                      type: "pdf",
+                      id: data.id,
+                      filename: data.title
+                    }
+                  })
+                });
+              }
+            }
+            loadConversations(userId); // Refresh conversations list
+          } catch (error) {
+            console.error("Failed to save PDF attachment to conversation:", error);
+          }
+        }
       } else {
         setUploadStatus("error");
       }
@@ -304,8 +366,8 @@ function ReparaturApp() {
       });
 
       // Get AI response
-      // Use chat mode to determine endpoint
-      const endpoint = (chatMode === "pdf" && uploadedPdf) ? `/chat/pdf` : `/chat/general`;
+      // Automatically detect endpoint based on PDF presence
+      const endpoint = uploadedPdf ? `/chat/pdf` : `/chat/general`;
       const params = new URLSearchParams({
         question: messageText,
         user_id: userId,
@@ -341,55 +403,36 @@ function ReparaturApp() {
     }
   };
 
-  // Load chat history
-  useEffect(() => {
-    if (!userId) return;
+  // Load chat history - Only for current conversation
+  // This is handled by switchToConversation when a conversation is selected
+  // We don't need to load all history automatically
 
-    async function loadHistory() {
-      try {
-        // Load all messages for user, optionally filtered by document
-        const url = uploadedPdf 
-          ? `http://localhost:8000/chat/history?user_id=${userId}&document_id=${uploadedPdf.id}`
-          : `http://localhost:8000/chat/history?user_id=${userId}`;
-          
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          setHistory(
-            data.map((msg) => ({
-              id: msg.id,
-              type: msg.role,
-              content: msg.message,
-            }))
-          );
-        }
-      } catch (err) {
-        console.error("Failed to load chat history", err);
+  // Function to load tools for a specific PDF
+  const loadToolsForPdf = async (pdfId) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8000/documents/${pdfId}/tools`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTools(data);
+      } else {
+        console.error("Failed to load tools - response not ok:", res.status);
+        setTools([]);
       }
+    } catch (err) {
+      console.error("Failed to load tools", err);
+      setTools([]);
     }
+  };
 
-    loadHistory();
-  }, [userId, uploadedPdf]);
-
-  // Fetch tools
+  // Fetch tools when uploadedPdf changes
   useEffect(() => {
-    if (!uploadedPdf) return;
-
-    async function loadTools() {
-      try {
-        const res = await fetch(
-          `http://localhost:8000/documents/${uploadedPdf.id}/tools`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setTools(data);
-        }
-      } catch (err) {
-        console.error("Failed to load tools", err);
-      }
+    if (!uploadedPdf) {
+      setTools([]);
+      return;
     }
-
-    loadTools();
+    loadToolsForPdf(uploadedPdf.id);
   }, [uploadedPdf]);
 
   // Handle repair analysis
@@ -496,8 +539,6 @@ function ReparaturApp() {
             onFileChange={handleFileChange}
             onUpload={handleUploadPdf}
             onDelete={handleDeletePdf}
-            chatMode={chatMode}
-            onChatModeChange={handleChatModeChange}
           />
 
           <ToolAnalysis

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from api.database.table_models import User, Device, Tool, DocumentTool, UploadedPdf
+from api.database.table_models import User, Device, Tool, DocumentTool, UploadedPdf, ServiceProvider
 from api.models.repair_analysis import (
     RepairFeasibilityResult, CostEstimation, TimeEstimation, 
     RepairComparison, ToolReusabilityAnalysis
@@ -183,9 +183,15 @@ class RepairAnalysisService:
             time_est = await RepairAnalysisService.estimate_repair_time(user_id, document_id, db)
             feasibility = await RepairAnalysisService.check_repair_feasibility(user_id, device_id, document_id, db)
             
-            # Professional service estimates (simplified)
-            professional_cost = 150.0  # Average professional repair cost
-            professional_time = 2.0    # Hours including travel/wait time
+            # Get device information for service provider matching
+            device_result = await db.execute(select(Device).where(Device.id == device_id))
+            device = device_result.scalar_one_or_none()
+            device_category = device.category if device else "general"
+            
+            # Get professional service estimates from real service providers
+            professional_cost, professional_time = await RepairAnalysisService._get_professional_estimates(
+                db, device_category
+            )
             
             self_repair = {
                 "cost": cost_est.total_cost,
@@ -202,10 +208,12 @@ class RepairAnalysisService:
             cost_difference = cost_est.total_cost - professional_cost
             time_difference = time_est.total_time_hours - professional_time
             
-            # Make recommendation
+            # Make recommendation based on feasibility, cost, and time
             if not feasibility.is_feasible:
                 recommendation = "professional"
             elif cost_difference > 100 and time_difference > 4:
+                recommendation = "professional"
+            elif professional_cost < cost_est.total_cost * 0.7:  # Professional is significantly cheaper
                 recommendation = "professional"
             else:
                 recommendation = "self_repair"
@@ -221,6 +229,63 @@ class RepairAnalysisService:
         except Exception as e:
             logger.error(f"Error comparing repair options: {e}")
             raise
+    
+    @staticmethod
+    async def _get_professional_estimates(db: AsyncSession, device_category: str) -> tuple[float, float]:
+        """Get professional service cost and time estimates from real service providers."""
+        try:
+            # First, try to find providers that specialize in this device category
+            specialized_query = select(ServiceProvider).where(
+                ServiceProvider.specialties.any(device_category)
+            ).where(
+                ServiceProvider.average_cost_per_hour.isnot(None)
+            ).where(
+                ServiceProvider.average_repair_time_hours.isnot(None)
+            ).order_by(ServiceProvider.rating.desc())
+            
+            result = await db.execute(specialized_query)
+            specialized_providers = result.scalars().all()
+            
+            # If no specialized providers, get general providers
+            if not specialized_providers:
+                general_query = select(ServiceProvider).where(
+                    ServiceProvider.average_cost_per_hour.isnot(None)
+                ).where(
+                    ServiceProvider.average_repair_time_hours.isnot(None)
+                ).order_by(ServiceProvider.rating.desc()).limit(5)
+                
+                result = await db.execute(general_query)
+                providers = result.scalars().all()
+            else:
+                providers = specialized_providers[:3]  # Use top 3 specialized providers
+            
+            if providers:
+                # Calculate average cost and time from real providers
+                total_cost = 0
+                total_time = 0
+                count = 0
+                
+                for provider in providers:
+                    if provider.average_cost_per_hour and provider.average_repair_time_hours:
+                        # Calculate total cost (hourly rate * time)
+                        provider_cost = provider.average_cost_per_hour * provider.average_repair_time_hours
+                        total_cost += provider_cost
+                        total_time += provider.average_repair_time_hours
+                        count += 1
+                
+                if count > 0:
+                    avg_cost = total_cost / count
+                    avg_time = total_time / count
+                    return round(avg_cost, 2), round(avg_time, 1)
+            
+            # Fallback to default values if no providers found
+            logger.warning(f"No service providers found for {device_category}, using default estimates")
+            return 150.0, 2.0
+            
+        except Exception as e:
+            logger.error(f"Error getting professional estimates: {e}")
+            # Fallback to default values
+            return 150.0, 2.0
     
     @staticmethod
     async def analyze_tool_reusability(

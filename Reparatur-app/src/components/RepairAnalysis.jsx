@@ -18,28 +18,45 @@ function RepairAnalysis({
       onPerformAnalysis(true); // Set loading/show state
       
       // Fetch repair feasibility
+      const deviceId = selectedDevice.device_id || selectedDevice.id;
       const feasibilityResponse = await fetch(
-        `http://localhost:8000/repair-analysis/feasibility?user_id=${userId}&device_id=${selectedDevice.device_id}&document_id=${uploadedPdf.id}`
+        `http://localhost:8000/repair-analysis/feasibility?user_id=${userId}&device_id=${deviceId}&document_id=${uploadedPdf.id}`
       );
-      const feasibility = feasibilityResponse.ok ? await feasibilityResponse.json() : null;
+      
+      if (!feasibilityResponse.ok) {
+        throw new Error(`Feasibility check failed: ${feasibilityResponse.status}`);
+      }
+      const feasibility = await feasibilityResponse.json();
 
       // Fetch cost estimation
       const costResponse = await fetch(
         `http://localhost:8000/repair-analysis/cost-estimation?user_id=${userId}&document_id=${uploadedPdf.id}`
       );
-      const costs = costResponse.ok ? await costResponse.json() : null;
+      
+      if (!costResponse.ok) {
+        throw new Error(`Cost estimation failed: ${costResponse.status}`);
+      }
+      const costs = await costResponse.json();
 
       // Fetch time estimation
       const timeResponse = await fetch(
         `http://localhost:8000/repair-analysis/time-estimation?user_id=${userId}&document_id=${uploadedPdf.id}`
       );
-      const time = timeResponse.ok ? await timeResponse.json() : null;
+      
+      if (!timeResponse.ok) {
+        throw new Error(`Time estimation failed: ${timeResponse.status}`);
+      }
+      const time = await timeResponse.json();
 
       // Fetch comparison
       const comparisonResponse = await fetch(
-        `http://localhost:8000/repair-analysis/compare-options?user_id=${userId}&device_id=${selectedDevice.device_id}&document_id=${uploadedPdf.id}`
+        `http://localhost:8000/repair-analysis/compare-options?user_id=${userId}&device_id=${deviceId}&document_id=${uploadedPdf.id}`
       );
-      const comparison = comparisonResponse.ok ? await comparisonResponse.json() : null;
+      
+      if (!comparisonResponse.ok) {
+        throw new Error(`Comparison failed: ${comparisonResponse.status}`);
+      }
+      const comparison = await comparisonResponse.json();
 
       onPerformAnalysis({
         feasibility,
@@ -49,7 +66,9 @@ function RepairAnalysis({
       });
     } catch (error) {
       console.error("Error performing repair analysis:", error);
-      alert("Failed to perform repair analysis");
+      const errorMessage = error.message || "Unknown error occurred";
+      alert(`Failed to perform repair analysis: ${errorMessage}`);
+      onPerformAnalysis(false); // Reset loading state
     }
   };
 
@@ -63,9 +82,10 @@ function RepairAnalysis({
         <h3 className="text-lg font-semibold">Repair Analysis</h3>
         <button
           onClick={performRepairAnalysis}
-          className="bg-purple-500 hover:bg-purple-700 text-white text-sm px-3 py-1 rounded"
+          disabled={showAnalysis === true && !repairAnalysis}
+          className="bg-purple-500 hover:bg-purple-700 disabled:bg-gray-400 text-white text-sm px-3 py-1 rounded"
         >
-          Analyze Repair
+          {(showAnalysis === true && !repairAnalysis) ? "Analyzing..." : "Analyze Repair"}
         </button>
       </div>
       
@@ -76,7 +96,7 @@ function RepairAnalysis({
             <div className="border-l-4 border-blue-500 pl-4">
               <h4 className="font-medium">Repair Feasibility</h4>
               <p className={`text-sm ${repairAnalysis.feasibility.is_feasible ? "text-green-600" : "text-red-600"}`}>
-                {repairAnalysis.feasibility.is_feasible ? "✅ You can perform this repair" : "❌ This repair may be too complex"}
+                {repairAnalysis.feasibility.is_feasible ? "[YES] You can perform this repair" : "[NO] This repair may be too complex"}
               </p>
               <p className="text-xs text-gray-600">
                 Your skill: {repairAnalysis.feasibility.user_skill_score}/5 | Required: {repairAnalysis.feasibility.required_skill_score}/5
@@ -109,11 +129,11 @@ function RepairAnalysis({
             <div className="border-l-4 border-green-500 pl-4">
               <h4 className="font-medium">Cost & Time Estimate</h4>
               <p className="text-sm">
-                💰 Total Cost: €{repairAnalysis.costs.total_cost.toFixed(2)} 
+                [COST] Total Cost: €{repairAnalysis.costs.total_cost.toFixed(2)} 
                 (Tools: €{repairAnalysis.costs.tools_cost.toFixed(2)}, Parts: €{repairAnalysis.costs.parts_cost.toFixed(2)})
               </p>
               <p className="text-sm">
-                ⏱️ Estimated Time: {repairAnalysis.time.total_time_hours.toFixed(1)} hours
+                [TIME] Estimated Time: {repairAnalysis.time.total_time_hours.toFixed(1)} hours
               </p>
               {repairAnalysis.costs.tool_details && repairAnalysis.costs.tool_details.length > 0 && (
                 <div className="mt-2">
@@ -140,20 +160,20 @@ function RepairAnalysis({
                   <p>Cost: €{repairAnalysis.comparison.self_repair.cost.toFixed(2)}</p>
                   <p>Time: {repairAnalysis.comparison.self_repair.time.toFixed(1)}h</p>
                   <p className={`text-xs ${repairAnalysis.comparison.self_repair.feasible ? "text-green-600" : "text-red-600"}`}>
-                    {repairAnalysis.comparison.self_repair.feasible ? "✅ Feasible" : "❌ Not recommended"}
+                    {repairAnalysis.comparison.self_repair.feasible ? "[YES] Feasible" : "[NO] Not recommended"}
                   </p>
                 </div>
                 <div>
                   <p className="font-medium">Professional:</p>
                   <p>Cost: €{repairAnalysis.comparison.professional_service.cost.toFixed(2)}</p>
                   <p>Time: {repairAnalysis.comparison.professional_service.time.toFixed(1)}h</p>
-                  <p className="text-xs text-green-600">✅ Guaranteed</p>
+                  <p className="text-xs text-green-600">[YES] Guaranteed</p>
                 </div>
               </div>
               <p className={`text-sm font-medium mt-2 ${
                 repairAnalysis.comparison.recommendation === "self_repair" ? "text-green-600" : "text-blue-600"
               }`}>
-                💡 Recommendation: {repairAnalysis.comparison.recommendation === "self_repair" ? "Do it yourself" : "Use professional service"}
+[RECOMMEND] {repairAnalysis.comparison.recommendation === "self_repair" ? "Do it yourself" : "Use professional service"}
               </p>
               <div className="mt-2 text-xs text-gray-600">
                 <p>Cost difference: €{repairAnalysis.comparison.cost_difference.toFixed(2)}</p>

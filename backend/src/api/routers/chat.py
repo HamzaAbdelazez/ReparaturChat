@@ -51,18 +51,57 @@ def get_conversation_history(conversation_id: UUID, db: Session, limit: int = 10
 
 @dataclass(frozen=True)
 class UserLevelQuestionPrefix:
-    BASE_PREFIX = """
-    You are a helpful assistant for a repair platform. Answer all questions in English and focus on repair topics for household appliances. 
+    # Simple prefixes that don't overwhelm normal conversation
+    BEGINNER: str = "You are a helpful assistant. I'm new to repairs, so please explain things clearly."
+    INTERMEDIATE: str = "You are a helpful assistant. I have some repair experience."
+    EXPERT: str = "You are a helpful assistant. I'm experienced with repairs."
     
-    When applicable, mention:
-    - What tools are needed
-    - Current prices and cost estimates
-    - Vendor suggestions with links
-    - Comparison between self-repair and professional help (cost & time)
-    """
-    BEGINNER: str = f"{BASE_PREFIX}\nI am a beginner with little prior experience in repairs."
-    INTERMEDIATE: str = f"{BASE_PREFIX}\nI have intermediate knowledge in repairs."
-    EXPERT: str = f"{BASE_PREFIX}\nI am an expert with extensive repair knowledge."
+    # Only use detailed repair context for repair-specific questions
+    REPAIR_CONTEXT = """
+When discussing repairs, please include:
+- Required tools and their prices
+- Step-by-step instructions appropriate for the user's skill level
+- Cost comparison: DIY vs professional service
+- Safety considerations
+"""
+
+
+def is_repair_related_question(question: str) -> bool:
+    """Check if the question is repair-related to decide whether to use repair context."""
+    repair_keywords = [
+        'repair', 'fix', 'broken', 'replace', 'install', 'maintenance', 
+        'troubleshoot', 'problem', 'issue', 'error', 'malfunction',
+        'appliance', 'dishwasher', 'washing machine', 'dryer', 'refrigerator',
+        'oven', 'microwave', 'tools', 'parts', 'cost', 'professional'
+    ]
+    question_lower = question.lower()
+    return any(keyword in question_lower for keyword in repair_keywords)
+
+
+def build_question_with_context(question: str, user_level_rate: int, conversation_context: str = "", is_repair_question: bool = False) -> str:
+    """Build the question with appropriate context based on content and user level."""
+    if user_level_rate in [3, 4]:
+        level_prefix = UserLevelQuestionPrefix.INTERMEDIATE
+    elif user_level_rate == 5:
+        level_prefix = UserLevelQuestionPrefix.EXPERT
+    else:
+        level_prefix = UserLevelQuestionPrefix.BEGINNER
+    
+    # Build context parts
+    context_parts = [level_prefix]
+    
+    # Add repair context only for repair-related questions
+    if is_repair_question:
+        context_parts.append(UserLevelQuestionPrefix.REPAIR_CONTEXT)
+    
+    # Add conversation history if available
+    if conversation_context:
+        context_parts.append(conversation_context)
+        context_parts.append(f"New question: {question}")
+    else:
+        context_parts.append(f"Question: {question}")
+    
+    return "\n\n".join(context_parts)
 
 
 @router.get("/general")
@@ -77,21 +116,19 @@ def general_chat(
     General chatbot endpoint (no document required).
     """
     try:
-        if user_level_rate == 3 or user_level_rate == 4:
-            question_prefix = UserLevelQuestionPrefix.INTERMEDIATE
-        elif user_level_rate == 5:
-            question_prefix = UserLevelQuestionPrefix.EXPERT
-        else:
-            question_prefix = UserLevelQuestionPrefix.BEGINNER
-
         # Get conversation history for context
         conversation_context = get_conversation_history(conversation_id, db) if conversation_id else ""
         
-        # Build the full question with context
-        if conversation_context:
-            full_question = f"{question_prefix}\n\n{conversation_context}\n\nNew question: {question}"
-        else:
-            full_question = f"{question_prefix}, {question}"
+        # Check if this is repair-related to determine context level
+        is_repair_question = is_repair_related_question(question)
+        
+        # Build the question with appropriate context
+        full_question = build_question_with_context(
+            question=question,
+            user_level_rate=user_level_rate,
+            conversation_context=conversation_context,
+            is_repair_question=is_repair_question
+        )
         
         # Call Gemma with conversation context
         response = ask_gemma3(full_question)
@@ -129,24 +166,19 @@ def chat_with_pdf(
     - Returns the model's response + elapsed time.
     """
     try:
-        if user_level_rate == 3 or user_level_rate == 4:
-            question_prefix = UserLevelQuestionPrefix.INTERMEDIATE
-        elif user_level_rate == 5:
-            question_prefix = UserLevelQuestionPrefix.EXPERT
-        else:
-            question_prefix = UserLevelQuestionPrefix.BEGINNER
-
         # Get conversation history for context
         conversation_context = get_conversation_history(conversation_id, db) if conversation_id else ""
         
-        # Build the question with user level prefix and conversation context
-        if conversation_context:
-            question = f"{question_prefix}\n\n{conversation_context}\n\nNew question: {question}"
-        else:
-            question = f"{question_prefix}, {question}"
+        # For PDF chat, assume it's repair-related and include repair context
+        enhanced_question = build_question_with_context(
+            question=question,
+            user_level_rate=user_level_rate,
+            conversation_context=conversation_context,
+            is_repair_question=True  # PDF uploads are typically repair manuals
+        )
             
         result = process_question(
-            question=question,
+            question=enhanced_question,
             db=db,
             document_id=document_id,
             user_id=user_id,

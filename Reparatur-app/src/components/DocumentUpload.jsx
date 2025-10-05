@@ -7,9 +7,7 @@ function DocumentUpload({
   uploadedPdf, 
   onFileChange, 
   onUpload,
-  onDelete,
-  chatMode,
-  onChatModeChange
+  onDelete
 }) {
   return (
     <div className="mb-6">
@@ -69,40 +67,6 @@ function DocumentUpload({
         )}
       </div>
 
-      {/* Chat Mode Selector - only show when PDF is uploaded */}
-      {uploadedPdf && (
-        <div className="mt-4 p-3 bg-gray-50 rounded border">
-          <div className="text-sm font-medium text-gray-700 mb-2">Chat Mode:</div>
-          <div className="flex gap-2 text-sm">
-            <button
-              onClick={() => onChatModeChange("pdf")}
-              className={`px-3 py-1 rounded ${
-                chatMode === "pdf"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              📄 PDF Chat
-            </button>
-            <button
-              onClick={() => onChatModeChange("general")}
-              className={`px-3 py-1 rounded ${
-                chatMode === "general"
-                  ? "bg-green-500 text-white"
-                  : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              💬 General Chat
-            </button>
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {chatMode === "pdf" 
-              ? "Ask questions about the uploaded PDF"
-              : "Ask general questions (not about the PDF)"
-            }
-          </div>
-        </div>
-      )}
     </div>
   );
 }
