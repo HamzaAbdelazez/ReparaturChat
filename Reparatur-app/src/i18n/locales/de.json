@@ -81,9 +81,9 @@
   "analysis": {
     "title": "Reparaturanalyse",
     "analyzing": "Analysiere...",
-    "analyzeFromChat": "Aus Chat analysieren",
+    "analyzeFromChat": "Aktuelles Problem analysieren",
     "analyzeFromPdf": "Aus PDF analysieren",
-    "noProblemDescription": "Keine Problembeschreibung im Chat gefunden. Bitte beschreiben Sie zuerst Ihr Reparaturproblem.",
+    "noProblemDescription": "Analysiere aktuelle Unterhaltung auf Reparaturprobleme...",
     "noDeviceSelected": "Bitte wählen Sie zuerst ein Gerät aus.",
     "uploadAndSelectDevice": "Bitte laden Sie zuerst ein Dokument hoch und wählen Sie ein Gerät aus.",
     "analysisError": "Reparaturanalyse fehlgeschlagen: {{error}}",

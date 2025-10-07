@@ -20,23 +20,22 @@ function RepairAnalysis({
     const userMessages = chatHistory.filter(msg => msg.type === 'user');
     if (userMessages.length === 0) return null;
     
-    // Look for repair-related keywords in recent messages
-    const repairKeywords = ['repair', 'fix', 'broken', 'not working', 'problem', 'issue', 'error', 'fault'];
+    // Always use the most recent user message as the problem description
+    // This allows continuous analysis after each new message
+    const recentMessage = userMessages[userMessages.length - 1];
     
-    for (let i = userMessages.length - 1; i >= 0; i--) {
-      const message = userMessages[i];
-      const containsRepairKeywords = repairKeywords.some(keyword => 
-        message.content.toLowerCase().includes(keyword)
-      );
-      
-      if (containsRepairKeywords && message.content.length > 20) {
-        return message.content;
-      }
+    // Accept any message that has meaningful content (at least 5 characters)
+    if (recentMessage && recentMessage.content.trim().length >= 5) {
+      return recentMessage.content;
     }
     
-    // If no repair-specific message found, use the most recent substantial message
-    const recentMessage = userMessages[userMessages.length - 1];
-    return recentMessage && recentMessage.content.length > 20 ? recentMessage.content : null;
+    // If the latest message is too short, combine recent messages
+    if (userMessages.length >= 2) {
+      const lastTwoMessages = userMessages.slice(-2).map(msg => msg.content).join('. ');
+      return lastTwoMessages.trim().length >= 10 ? lastTwoMessages : null;
+    }
+    
+    return null;
   };
 
   // Perform repair analysis based on chat problem description with automatic device detection
@@ -44,8 +43,9 @@ function RepairAnalysis({
     const problemDescription = extractProblemFromChat();
     
     if (!problemDescription) {
-      alert(t('analysis.noProblemDescription'));
-      return;
+      // If no description found, still try to analyze with a generic message
+      const fallbackDescription = "Device troubleshooting and repair analysis";
+      console.log('No specific problem description found, using fallback');
     }
 
     try {
@@ -61,7 +61,7 @@ function RepairAnalysis({
           },
           body: JSON.stringify({
             user_id: userId,
-            problem_description: problemDescription,
+            problem_description: problemDescription || "Device troubleshooting and repair analysis",
             chat_history: chatHistory.slice(-10), // Send last 10 messages for context
             document_id: uploadedPdf?.id || null // Include PDF ID if available for device extraction
           })
@@ -324,16 +324,16 @@ function RepairAnalysis({
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <p className="font-medium">{t('analysis.selfRepair')}:</p>
-                  <p>{t('analysis.cost')}: €{repairAnalysis.comparison.self_repair.cost.toFixed(2)}</p>
-                  <p>{t('analysis.time')}: {repairAnalysis.comparison.self_repair.time.toFixed(1)}h</p>
+                  <p>{t('analysis.cost')}: €{typeof repairAnalysis.comparison.self_repair.cost === 'number' ? repairAnalysis.comparison.self_repair.cost.toFixed(2) : repairAnalysis.comparison.self_repair.cost}</p>
+                  <p>{t('analysis.time')}: {typeof repairAnalysis.comparison.self_repair.time === 'number' ? repairAnalysis.comparison.self_repair.time.toFixed(1) + 'h' : repairAnalysis.comparison.self_repair.time}</p>
                   <p className={`text-xs ${repairAnalysis.comparison.self_repair.feasible ? "text-green-600" : "text-red-600"}`}>
                     {repairAnalysis.comparison.self_repair.feasible ? t('analysis.feasible') : t('analysis.notRecommended')}
                   </p>
                 </div>
                 <div>
                   <p className="font-medium">{t('analysis.professional')}:</p>
-                  <p>{t('analysis.cost')}: €{repairAnalysis.comparison.professional_service.cost.toFixed(2)}</p>
-                  <p>{t('analysis.time')}: {repairAnalysis.comparison.professional_service.time.toFixed(1)}h</p>
+                  <p>{t('analysis.cost')}: €{typeof repairAnalysis.comparison.professional_service.cost === 'number' ? repairAnalysis.comparison.professional_service.cost.toFixed(2) : repairAnalysis.comparison.professional_service.cost}</p>
+                  <p>{t('analysis.time')}: {typeof repairAnalysis.comparison.professional_service.time === 'number' ? repairAnalysis.comparison.professional_service.time.toFixed(1) + 'h' : repairAnalysis.comparison.professional_service.time}</p>
                   <p className="text-xs text-green-600">{t('analysis.guaranteed')}</p>
                 </div>
               </div>
