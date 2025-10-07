@@ -1,11 +1,17 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 function ToolAnalysis({ tools, userId, onAnalyzeToolReusability }) {
+  const { t } = useTranslation();
+  const [loadingTools, setLoadingTools] = React.useState({});
+
   const analyzeToolReusability = async (toolId) => {
     if (!userId) {
-      alert("Please log in first");
+      alert(t('errors.loginRequired'));
       return;
     }
+
+    setLoadingTools(prev => ({ ...prev, [toolId]: true }));
 
     try {
       // Get detailed breakdown
@@ -48,15 +54,23 @@ Overall Reusability Score: ${analysis.reusability_score}/5`;
       }
     } catch (error) {
       console.error("Error analyzing tool reusability:", error);
-      alert("Failed to analyze tool reusability");
+      alert(t('errors.analyzeToolFailed'));
+    } finally {
+      setLoadingTools(prev => ({ ...prev, [toolId]: false }));
     }
   };
 
   return (
     <div className="bg-white p-4 rounded-xl shadow-md mb-6">
-      <h3 className="text-lg font-semibold mb-2">Required Tools & Reusability</h3>
+      <h3 className="text-lg font-semibold mb-2">{t('tools.title')}</h3>
       {tools.length === 0 ? (
-        <p className="text-gray-500 italic">No tools found.</p>
+        <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <div className="text-4xl mb-2">🛠️</div>
+          <p className="text-gray-500 font-medium">{t('tools.noToolsExtracted')}</p>
+          <p className="text-sm text-gray-400 mt-1">
+            {t('tools.noToolsDescription')}
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {tools.map((tool) => (
@@ -66,7 +80,7 @@ Overall Reusability Score: ${analysis.reusability_score}/5`;
                   <p className="font-medium">🛠 {tool.name}</p>
                   {tool.reusability_score && (
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm text-gray-600">Reusability:</span>
+                      <span className="text-sm text-gray-600">{t('tools.reusability')}:</span>
                       <div className="flex">
                         {[1, 2, 3, 4, 5].map((num) => (
                           <span
@@ -85,17 +99,25 @@ Overall Reusability Score: ${analysis.reusability_score}/5`;
                 </div>
                 <button
                   onClick={() => analyzeToolReusability(tool.id)}
-                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                  disabled={loadingTools[tool.id]}
+                  className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                    loadingTools[tool.id] 
+                      ? "bg-gray-400 cursor-not-allowed" 
+                      : "bg-blue-500 hover:bg-blue-600 text-white"
+                  }`}
                 >
-                  Analyze
+                  {loadingTools[tool.id] && (
+                    <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  {loadingTools[tool.id] ? t('tools.analyzing') : t('tools.analyze')}
                 </button>
               </div>
               {tool.min_price && (
                 <p className="text-sm text-gray-600">
-                  Price: €{tool.min_price.toFixed(2)}
-                  {tool.max_price && tool.max_price !== tool.min_price && 
-                    ` - €${tool.max_price.toFixed(2)}`
-                  }
+                  {t('tools.price', { 
+                    min: tool.min_price.toFixed(2), 
+                    range: tool.max_price && tool.max_price !== tool.min_price ? ` - €${tool.max_price.toFixed(2)}` : '' 
+                  })}
                 </p>
               )}
             </div>

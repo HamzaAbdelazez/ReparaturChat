@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Wrench, X, RefreshCw } from "lucide-react";
 
 function DocumentUpload({ 
@@ -9,6 +10,7 @@ function DocumentUpload({
   onUpload,
   onDelete
 }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-6">
       {/* PDF Upload Section */}
@@ -17,7 +19,7 @@ function DocumentUpload({
           <Wrench className="w-12 h-12 text-blue-600" />
         </div>
         <div className="text">
-          <span>{file ? file.name : "Click to upload your PDF"}</span>
+          <span>{file ? file.name : t('upload.clickToUpload')}</span>
         </div>
         <input
           type="file"
@@ -30,13 +32,16 @@ function DocumentUpload({
         <button
           onClick={onUpload}
           disabled={uploadStatus === "uploading" || !file}
-          className={`bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded ${
+          className={`bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded flex items-center gap-2 ${
             uploadStatus === "uploading" || !file
               ? "opacity-50 cursor-not-allowed"
               : ""
           }`}
         >
-          {uploadStatus === "uploading" ? "Uploading..." : uploadedPdf ? "Replace PDF" : "Upload"}
+          {uploadStatus === "uploading" && (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          )}
+          {uploadStatus === "uploading" ? t('upload.processingPdf') : uploadedPdf ? t('upload.replacePdf') : t('upload.uploadPdf')}
         </button>
         
         {uploadedPdf && (
@@ -44,7 +49,7 @@ function DocumentUpload({
             onClick={onDelete}
             className="bg-red-500 hover:bg-red-700 text-white text-sm font-semibold py-2 px-3 rounded flex items-center gap-1"
           >
-            <X size={16} /> Delete
+            <X size={16} /> {t('upload.delete')}
           </button>
         )}
       </div>
@@ -52,18 +57,37 @@ function DocumentUpload({
       {/* PDF Status */}
       <div className="mt-2 text-sm text-center">
         {uploadStatus === "uploaded" && uploadedPdf && (
-          <div className="text-green-600 mb-2">
-            ✅ Uploaded: {uploadedPdf.title}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-700">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+              <span className="font-medium">{t('upload.ready')}</span>
+            </div>
+            <div className="text-xs mt-1">PDF: {uploadedPdf.title}</div>
           </div>
         )}
         {uploadStatus === "uploading" && (
-          <span className="text-blue-600">⏳ Uploading...</span>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>{t('upload.processingPdf')}</span>
+            </div>
+            <div className="text-xs mt-1">{t('upload.extractingTools')}</div>
+          </div>
         )}
         {uploadStatus === "error" && (
-          <span className="text-red-600">❌ Upload failed</span>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-red-500">⚠️</span>
+              <span>{t('upload.uploadFailed')}</span>
+            </div>
+          </div>
         )}
         {uploadStatus === "not_uploaded" && file && (
-          <span className="text-gray-600">⚠️ Not uploaded yet</span>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-yellow-700">
+            <span>{t('upload.readyToUpload', { filename: file.name })}</span>
+          </div>
         )}
       </div>
 

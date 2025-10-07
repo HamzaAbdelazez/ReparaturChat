@@ -1,0 +1,89 @@
+{
+  "app": {
+    "title": "ReparaturApp",
+    "subtitle": "Repair instead of replace.",
+    "description": "Upload a repair manual or ask a general question.",
+    "descriptionWithPdf": "Ask questions about your repair manual: \"{{title}}\" or get general repair advice."
+  },
+  "navigation": {
+    "newChat": "New Chat",
+    "conversations": "Conversations",
+    "logout": "Logout",
+    "searchConversations": "Search conversations..."
+  },
+  "quickActions": {
+    "title": "Quick Actions:",
+    "requiredTools": "Required Tools",
+    "timeEstimate": "Time Estimate",
+    "costComparison": "Cost Comparison",
+    "difficultyCheck": "Difficulty Check",
+    "toolsQuestion": "What tools do I need for this repair?",
+    "timeQuestion": "How long will this repair take?",
+    "costQuestion": "What will this repair cost compared to a professional?",
+    "difficultyQuestion": "Is this repair feasible for my skill level?"
+  },
+  "upload": {
+    "clickToUpload": "Click to upload your PDF",
+    "uploadPdf": "Upload PDF",
+    "replacePdf": "Replace PDF",
+    "delete": "Delete",
+    "processingPdf": "Processing PDF...",
+    "ready": "Ready to Chat!",
+    "uploadFailed": "Upload failed - please try again",
+    "readyToUpload": "Ready to upload: {{filename}}",
+    "extractingTools": "Extracting tools and preparing for chat",
+    "deleteConfirm": "Are you sure you want to delete \"{{title}}\"?"
+  },
+  "chat": {
+    "title": "Chat",
+    "noMessages": "No messages yet.",
+    "placeholder": "Type your question here... (Press Enter to send, Shift+Enter for new line)",
+    "aiThinking": "AI is thinking...",
+    "characterCount": "{{count}}/4000"
+  },
+  "tools": {
+    "title": "Required Tools & Reusability",
+    "noToolsExtracted": "No tools extracted yet",
+    "noToolsDescription": "Upload a repair manual PDF to see required tools",
+    "reusability": "Reusability:",
+    "analyze": "Analyze",
+    "analyzing": "Analyzing...",
+    "price": "Price: €{{min}}{{range}}"
+  },
+  "conversations": {
+    "noConversations": "No conversations yet",
+    "noConversationsDescription": "Start by asking a question!",
+    "active": "Active",
+    "new": "New",
+    "messages": "{{count}} messages",
+    "noSearchResults": "No conversations found for \"{{query}}\""
+  },
+  "tips": {
+    "general": " Upload a repair manual PDF for specific guidance, or ask general repair questions!",
+    "pdfMode": "📄 PDF Mode: Ask questions about your uploaded manual: \"{{title}}\""
+  },
+  "errors": {
+    "loginRequired": "Please log in first",
+    "uploadFailed": "Failed to upload PDF",
+    "deleteFailed": "Failed to delete PDF",
+    "loadDevicesFailed": "Error loading user devices",
+    "loadConversationsFailed": "Error loading conversations",
+    "createConversationFailed": "Failed to create conversation",
+    "loadMessagesFailed": "Error loading conversation messages",
+    "sendMessageFailed": "Failed to send message",
+    "loadToolsFailed": "Failed to load tools",
+    "analyzeToolFailed": "Failed to analyze tool reusability"
+  },
+  "devices": {
+    "selector": "Device Selector",
+    "manage": "Manage Devices"
+  },
+  "analysis": {
+    "repair": "Repair Analysis"
+  },
+  "language": {
+    "switch": "Language",
+    "english": "English",
+    "german": "Deutsch"
+  }
+}

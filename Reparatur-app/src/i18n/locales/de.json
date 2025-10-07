@@ -1,0 +1,89 @@
+{
+  "app": {
+    "title": "ReparaturApp",
+    "subtitle": "Reparieren statt ersetzen.",
+    "description": "Laden Sie ein Reparaturhandbuch hoch oder stellen Sie eine allgemeine Frage.",
+    "descriptionWithPdf": "Stellen Sie Fragen zu Ihrem Reparaturhandbuch: \"{{title}}\" oder erhalten Sie allgemeine Reparaturberatung."
+  },
+  "navigation": {
+    "newChat": "Neuer Chat",
+    "conversations": "Unterhaltungen",
+    "logout": "Abmelden",
+    "searchConversations": "Unterhaltungen suchen..."
+  },
+  "quickActions": {
+    "title": "Schnellaktionen:",
+    "requiredTools": "Benötigte Werkzeuge",
+    "timeEstimate": "Zeitschätzung",
+    "costComparison": "Kostenvergleich",
+    "difficultyCheck": "Schwierigkeitsprüfung",
+    "toolsQuestion": "Welche Werkzeuge benötige ich für diese Reparatur?",
+    "timeQuestion": "Wie lange wird diese Reparatur dauern?",
+    "costQuestion": "Was kostet diese Reparatur im Vergleich zu einem Profi?",
+    "difficultyQuestion": "Ist diese Reparatur für mein Können machbar?"
+  },
+  "upload": {
+    "clickToUpload": "Klicken Sie hier, um Ihr PDF hochzuladen",
+    "uploadPdf": "PDF hochladen",
+    "replacePdf": "PDF ersetzen",
+    "delete": "Löschen",
+    "processingPdf": "PDF wird verarbeitet...",
+    "ready": "Bereit zum Chatten!",
+    "uploadFailed": "Upload fehlgeschlagen - bitte versuchen Sie es erneut",
+    "readyToUpload": "Bereit zum Hochladen: {{filename}}",
+    "extractingTools": "Werkzeuge extrahieren und Chat vorbereiten",
+    "deleteConfirm": "Sind Sie sicher, dass Sie \"{{title}}\" löschen möchten?"
+  },
+  "chat": {
+    "title": "Chat",
+    "noMessages": "Noch keine Nachrichten.",
+    "placeholder": "Geben Sie hier Ihre Frage ein... (Enter zum Senden, Shift+Enter für neue Zeile)",
+    "aiThinking": "KI denkt nach...",
+    "characterCount": "{{count}}/4000"
+  },
+  "tools": {
+    "title": "Benötigte Werkzeuge & Wiederverwendbarkeit",
+    "noToolsExtracted": "Noch keine Werkzeuge extrahiert",
+    "noToolsDescription": "Laden Sie ein Reparaturhandbuch-PDF hoch, um benötigte Werkzeuge zu sehen",
+    "reusability": "Wiederverwendbarkeit:",
+    "analyze": "Analysieren",
+    "analyzing": "Analysiere...",
+    "price": "Preis: €{{min}}{{range}}"
+  },
+  "conversations": {
+    "noConversations": "Noch keine Unterhaltungen",
+    "noConversationsDescription": "Beginnen Sie mit einer Frage!",
+    "active": "Aktiv",
+    "new": "Neu",
+    "messages": "{{count}} Nachrichten",
+    "noSearchResults": "Keine Unterhaltungen gefunden für \"{{query}}\""
+  },
+  "tips": {
+    "general": "💡 **Tipp:** Laden Sie ein Reparaturhandbuch-PDF für spezifische Anleitung hoch oder stellen Sie allgemeine Reparaturfragen!",
+    "pdfMode": "📄 **PDF-Modus:** Stellen Sie Fragen zu Ihrem hochgeladenen Handbuch: \"{{title}}\""
+  },
+  "errors": {
+    "loginRequired": "Bitte melden Sie sich zuerst an",
+    "uploadFailed": "PDF-Upload fehlgeschlagen",
+    "deleteFailed": "PDF löschen fehlgeschlagen",
+    "loadDevicesFailed": "Fehler beim Laden der Benutzergeräte",
+    "loadConversationsFailed": "Fehler beim Laden der Unterhaltungen",
+    "createConversationFailed": "Erstellen der Unterhaltung fehlgeschlagen",
+    "loadMessagesFailed": "Fehler beim Laden der Unterhaltungsnachrichten",
+    "sendMessageFailed": "Nachricht senden fehlgeschlagen",
+    "loadToolsFailed": "Werkzeuge laden fehlgeschlagen",
+    "analyzeToolFailed": "Werkzeug-Wiederverwendbarkeitsanalyse fehlgeschlagen"
+  },
+  "devices": {
+    "selector": "Gerätewahl",
+    "manage": "Geräte verwalten"
+  },
+  "analysis": {
+    "repair": "Reparaturanalyse"
+  },
+  "language": {
+    "switch": "Sprache",
+    "english": "English",
+    "german": "Deutsch"
+  }
+}

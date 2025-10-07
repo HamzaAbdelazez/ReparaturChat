@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 function ChatInterface({ 
   history, 
@@ -10,6 +11,7 @@ function ChatInterface({
   onSend,
   onQuickSend 
 }) {
+  const { t } = useTranslation();
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -23,9 +25,9 @@ function ChatInterface({
 
       {/* Chat Box */}
       <div className="bg-white p-4 rounded-xl shadow-md max-h-60 overflow-y-auto mb-6">
-        <h3 className="text-lg font-semibold mb-2">Chat</h3>
+        <h3 className="text-lg font-semibold mb-2">{t('chat.title')}</h3>
         {history.length === 0 ? (
-          <p className="text-gray-500 italic">No messages yet.</p>
+          <p className="text-gray-500 italic">{t('chat.noMessages')}</p>
         ) : (
           <ul className="space-y-2">
             {history.map((msg, index) => (
@@ -46,7 +48,7 @@ function ChatInterface({
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                  <span className="text-gray-500 text-sm">AI is thinking...</span>
+                  <span className="text-gray-500 text-sm">{t('chat.aiThinking')}</span>
                 </div>
               </li>
             )}
@@ -62,7 +64,7 @@ function ChatInterface({
         <div className="flex">
           <textarea
             className="grow m-4 outline-none min-h-16 resize-none"
-            placeholder="Type your question here... (Press Enter to send, Shift+Enter for new line)"
+            placeholder={t('chat.placeholder')}
             value={question}
             onChange={(e) => onQuestionChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -71,7 +73,7 @@ function ChatInterface({
         </div>
         <div className="flex gap-2 items-center absolute right-3 bottom-2">
           <div className="text-xs text-gray-500">
-            {question.length}/4000
+            {t('chat.characterCount', { count: question.length })}
           </div>
           <button
             type="submit"

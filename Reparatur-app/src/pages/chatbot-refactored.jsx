@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 
 // Components
@@ -9,9 +10,12 @@ import DeviceSelector from "../components/DeviceSelector";
 import RepairAnalysis from "../components/RepairAnalysis";
 import ChatInterface from "../components/ChatInterface";
 import DeviceManager from "../components/DeviceManager";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import "../App.css";
 
 function ReparaturApp() {
+  const { t } = useTranslation();
+  
   // State
   const [question, setQuestion] = useState("");
   const [file, setFile] = useState(null);
@@ -29,6 +33,7 @@ function ReparaturApp() {
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   // Auto-detect chat mode based on PDF presence - no manual selection needed
   const navigate = useNavigate();
 
@@ -454,81 +459,158 @@ function ReparaturApp() {
   return (
     <div className="min-h-screen flex bg-neutral-100">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-700 text-white flex flex-col p-4 h-screen sticky top-0">
+      <div className="w-64 md:w-64 sm:w-48 bg-gray-700 text-white flex flex-col p-4 h-screen sticky top-0 overflow-hidden">
         <button
           onClick={createNewConversation}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm font-semibold"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm font-semibold mb-4"
         >
-          <Plus size={16} /> New Chat
+          <Plus size={16} /> {t('navigation.newChat')}
         </button>
 
-        <h2 className="mt-6 mb-2 text-sm font-bold uppercase tracking-wide text-gray-400">
-          Conversations
+        {/* Search Conversations */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder={t('navigation.searchConversations')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-3 py-2 text-sm bg-gray-600 text-white placeholder-gray-400 border border-gray-500 rounded focus:outline-none focus:border-blue-400"
+          />
+        </div>
+
+        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-400">
+          {t('navigation.conversations')} ({conversations.filter(conv => 
+            conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (conv.latest_message && conv.latest_message.toLowerCase().includes(searchQuery.toLowerCase()))
+          ).length})
         </h2>
+        
         <div className="flex-1 overflow-y-auto space-y-2">
           {conversations.length === 0 ? (
-            <p className="text-gray-500 text-sm italic">No conversations yet</p>
+            <div className="text-center py-8">
+              <div className="text-gray-500 text-sm">{t('conversations.noConversations')}</div>
+              <div className="text-xs text-gray-400 mt-1">{t('conversations.noConversationsDescription')}</div>
+            </div>
           ) : (
-            conversations.map((conv) => (
-              <div
-                key={conv.id}
-                onClick={() => switchToConversation(conv.id)}
-                className={`p-2 rounded text-sm cursor-pointer hover:bg-gray-600 ${
-                  currentConversationId === conv.id
-                    ? "bg-blue-600"
-                    : "bg-gray-600"
-                }`}
-              >
-                <div className="font-medium truncate">{conv.title}</div>
-                <div className="text-xs text-gray-300 mt-1 truncate">
-                  {conv.latest_message}
+            conversations
+              .filter(conv => 
+                searchQuery === "" || 
+                conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (conv.latest_message && conv.latest_message.toLowerCase().includes(searchQuery.toLowerCase()))
+              )
+              .map((conv) => (
+                <div
+                  key={conv.id}
+                  onClick={() => switchToConversation(conv.id)}
+                  className={`p-3 rounded-lg text-sm cursor-pointer transition-all duration-200 border ${
+                    currentConversationId === conv.id
+                      ? "bg-blue-600 border-blue-500"
+                      : "bg-gray-600 border-gray-500 hover:bg-gray-550"
+                  }`}
+                >
+                  <div className="font-medium truncate">{conv.title}</div>
+                  {conv.latest_message && (
+                    <div className="text-xs text-gray-300 mt-1 truncate">
+                      {conv.latest_message}
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center text-xs text-gray-400 mt-2">
+                    <span>{t('conversations.messages', { count: conv.message_count })}</span>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      conv.latest_message ? "bg-green-600" : "bg-gray-500"
+                    }`}>
+                      {conv.latest_message ? t('conversations.active') : t('conversations.new')}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {conv.message_count} messages
-                </div>
-              </div>
-            ))
+              ))
           )}
+          
+          {searchQuery && conversations.filter(conv => 
+            conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (conv.latest_message && conv.latest_message.toLowerCase().includes(searchQuery.toLowerCase()))
+          ).length === 0 && (
+            <div className="text-center py-4 text-gray-400 text-sm">
+              {t('conversations.noSearchResults', { query: searchQuery })}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-3">
+          <LanguageSwitcher />
         </div>
 
         <button
           onClick={handleSignOut}
-          className="mt-4 bg-red-500 hover:bg-red-600 px-3 py-2 rounded text-sm font-semibold"
+          className="mt-2 bg-red-500 hover:bg-red-600 px-3 py-2 rounded text-sm font-semibold"
         >
-          Logout
+          {t('navigation.logout')}
         </button>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center overflow-y-auto">
-        <div className="w-[80%] max-w-2xl py-6">
+        <div className="w-full max-w-4xl px-4 md:px-6 py-6">
           {/* Header */}
           <h1 className="bg-gradient-to-r from-black via-blue-500 to-violet-800 inline-block text-transparent bg-clip-text font-bold text-5xl leading-tight">
-            ReparaturApp,
+            {t('app.title')},
           </h1>
           <br />
           <h1 className="bg-gradient-to-r from-black via-blue-500 to-violet-800 inline-block text-transparent bg-clip-text font-bold text-5xl leading-tight mb-4">
-           Repair instead of replace.
+           {t('app.subtitle')}
           </h1>
 
-          <p className="text-blue-600 leading-tight tracking-tight mb-4 text-lg">
-            Upload a repair manual or ask a general question.
-          </p>
 
-          {/* Quick Suggestions */}
-          <div className="flex w-full mb-6 gap-3 text-sm text-neutral-800">
-            <div
-              className="group relative grow border border-gray-300 shadow-sm hover:shadow-md hover:bg-neutral-100/30 rounded-xl p-4 transition-all duration-300 cursor-pointer"
-              onClick={(e) => handleSend(e, "What does the repair cost compared to a professional?")}
-            >
-              What does the repair cost compared to a professional?
+          {/* Quick Action Buttons */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">{t('quickActions.title')}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              <button
+                onClick={(e) => handleSend(e, t('quickActions.toolsQuestion'))}
+                className="bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg p-3 text-blue-700 transition-colors duration-200 flex items-center gap-2"
+              >
+                <span>🛠️</span>
+                <span>{t('quickActions.requiredTools')}</span>
+              </button>
+              <button
+                onClick={(e) => handleSend(e, t('quickActions.timeQuestion'))}
+                className="bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg p-3 text-green-700 transition-colors duration-200 flex items-center gap-2"
+              >
+                <span>⏱️</span>
+                <span>{t('quickActions.timeEstimate')}</span>
+              </button>
+              <button
+                onClick={(e) => handleSend(e, t('quickActions.costQuestion'))}
+                className="bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg p-3 text-purple-700 transition-colors duration-200 flex items-center gap-2"
+              >
+                <span>💰</span>
+                <span>{t('quickActions.costComparison')}</span>
+              </button>
+              <button
+                onClick={(e) => handleSend(e, t('quickActions.difficultyQuestion'))}
+                className="bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg p-3 text-orange-700 transition-colors duration-200 flex items-center gap-2"
+              >
+                <span>📊</span>
+                <span>{t('quickActions.difficultyCheck')}</span>
+              </button>
             </div>
-            <div
-              className="group relative grow border border-gray-300 shadow-sm hover:shadow-md hover:bg-neutral-100/30 rounded-xl p-4 transition-all duration-300 cursor-pointer"
-              onClick={(e) => handleSend(e, "What tools do I need for the repair?")}
-            >
-              What tools do I need for the repair?
-            </div>
+            
+            {/* Contextual suggestions based on PDF upload */}
+            {!uploadedPdf && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 text-center">
+                  {t('tips.general')}
+                </p>
+              </div>
+            )}
+            
+            {uploadedPdf && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-700 text-center">
+                  {t('tips.pdfMode', { title: uploadedPdf.title })}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Traditional PDF Upload Interface */}
