@@ -1,15 +1,25 @@
 import logging
 from uuid import UUID
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from api.routers.dependencies import db_dependency
 from api.service.repair_analysis import RepairAnalysisService
 from api.service.repair_feasibility import RepairFeasibilityService
 from api.service.tool_reusability import ToolReusabilityService
+from api.service.chat_based_analysis import ChatBasedAnalysisService
 from api.models.repair_analysis import (
     RepairFeasibilityResult, CostEstimation, TimeEstimation, 
     RepairComparison, ToolReusabilityAnalysis
 )
+
+
+class ChatBasedAnalysisRequest(BaseModel):
+    user_id: UUID
+    problem_description: str
+    chat_history: List[Dict[str, Any]] = []
+    document_id: Optional[UUID] = None
 
 logger = logging.getLogger(__name__)
 
@@ -115,3 +125,24 @@ async def get_tool_reusability_breakdown(
     except Exception as e:
         logger.error(f"Error getting reusability breakdown: {e}")
         raise HTTPException(status_code=500, detail="Failed to get reusability breakdown")
+
+
+@router.post("/chat-based-analysis")
+async def analyze_chat_based_problem(
+    request: ChatBasedAnalysisRequest,
+    db = Depends(db_dependency)
+) -> Dict[str, Any]:
+    """Analyze repair problem from chat description."""
+    try:
+        service = ChatBasedAnalysisService(db)
+        return await service.analyze_chat_problem(
+            user_id=request.user_id,
+            problem_description=request.problem_description,
+            chat_history=request.chat_history,
+            document_id=request.document_id
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error in chat-based analysis: {e}")
+        raise HTTPException(status_code=500, detail="Failed to analyze chat-based problem")

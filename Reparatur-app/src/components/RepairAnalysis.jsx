@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 function RepairAnalysis({ 
   uploadedPdf, 
@@ -6,19 +7,94 @@ function RepairAnalysis({
   userId, 
   showAnalysis, 
   repairAnalysis, 
-  onPerformAnalysis 
+  onPerformAnalysis,
+  chatHistory 
 }) {
-  const performRepairAnalysis = async () => {
-    if (!uploadedPdf || !selectedDevice) {
-      alert("Please upload a document and select a device first.");
+  const { t } = useTranslation();
+
+  // Extract problem description from chat history
+  const extractProblemFromChat = () => {
+    if (!chatHistory || chatHistory.length === 0) return null;
+    
+    // Get the last user message that might contain a problem description
+    const userMessages = chatHistory.filter(msg => msg.type === 'user');
+    if (userMessages.length === 0) return null;
+    
+    // Look for repair-related keywords in recent messages
+    const repairKeywords = ['repair', 'fix', 'broken', 'not working', 'problem', 'issue', 'error', 'fault'];
+    
+    for (let i = userMessages.length - 1; i >= 0; i--) {
+      const message = userMessages[i];
+      const containsRepairKeywords = repairKeywords.some(keyword => 
+        message.content.toLowerCase().includes(keyword)
+      );
+      
+      if (containsRepairKeywords && message.content.length > 20) {
+        return message.content;
+      }
+    }
+    
+    // If no repair-specific message found, use the most recent substantial message
+    const recentMessage = userMessages[userMessages.length - 1];
+    return recentMessage && recentMessage.content.length > 20 ? recentMessage.content : null;
+  };
+
+  // Perform repair analysis based on chat problem description with automatic device detection
+  const performChatBasedAnalysis = async () => {
+    const problemDescription = extractProblemFromChat();
+    
+    if (!problemDescription) {
+      alert(t('analysis.noProblemDescription'));
       return;
     }
 
     try {
-      onPerformAnalysis(true); // Set loading/show state
+      onPerformAnalysis(true); // Set loading state
+      
+      // Call the new chat-based analysis endpoint without requiring device_id
+      const analysisResponse = await fetch(
+        `http://localhost:8000/repair-analysis/chat-based-analysis`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            problem_description: problemDescription,
+            chat_history: chatHistory.slice(-10), // Send last 10 messages for context
+            document_id: uploadedPdf?.id || null // Include PDF ID if available for device extraction
+          })
+        }
+      );
+      
+      if (!analysisResponse.ok) {
+        throw new Error(`Analysis failed: ${analysisResponse.status}`);
+      }
+      
+      const analysisResult = await analysisResponse.json();
+      onPerformAnalysis(analysisResult);
+      
+    } catch (error) {
+      console.error("Error performing chat-based repair analysis:", error);
+      alert(t('analysis.analysisError', { error: error.message }));
+      onPerformAnalysis(false);
+    }
+  };
+
+  // Original PDF-based analysis (keep for backward compatibility)
+  const performPdfBasedAnalysis = async () => {
+    if (!uploadedPdf || !selectedDevice) {
+      alert(t('analysis.uploadAndSelectDevice'));
+      return;
+    }
+
+    try {
+      onPerformAnalysis(true);
+      
+      const deviceId = selectedDevice.device_id || selectedDevice.id;
       
       // Fetch repair feasibility
-      const deviceId = selectedDevice.device_id || selectedDevice.id;
       const feasibilityResponse = await fetch(
         `http://localhost:8000/repair-analysis/feasibility?user_id=${userId}&device_id=${deviceId}&document_id=${uploadedPdf.id}`
       );
@@ -65,45 +141,132 @@ function RepairAnalysis({
         comparison
       });
     } catch (error) {
-      console.error("Error performing repair analysis:", error);
-      const errorMessage = error.message || "Unknown error occurred";
-      alert(`Failed to perform repair analysis: ${errorMessage}`);
-      onPerformAnalysis(false); // Reset loading state
+      console.error("Error performing PDF-based repair analysis:", error);
+      alert(t('analysis.analysisError', { error: error.message }));
+      onPerformAnalysis(false);
     }
   };
 
-  if (!uploadedPdf || !selectedDevice) {
+  // Determine if we should show the component
+  const problemDescription = extractProblemFromChat();
+  const hasChatContent = chatHistory && chatHistory.length > 0;
+  const hasDevice = selectedDevice != null;
+  
+  // Show if we have chat content (device will be auto-detected), or if we have PDF
+  const shouldShow = hasChatContent || uploadedPdf;
+  
+  if (!shouldShow) {
     return null;
   }
 
   return (
     <div className="bg-white p-4 rounded-xl shadow-md mb-6">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold">Repair Analysis</h3>
-        <button
-          onClick={performRepairAnalysis}
-          disabled={showAnalysis === true && !repairAnalysis}
-          className="bg-purple-500 hover:bg-purple-700 disabled:bg-gray-400 text-white text-sm px-3 py-1 rounded"
-        >
-          {(showAnalysis === true && !repairAnalysis) ? "Analyzing..." : "Analyze Repair"}
-        </button>
+        <h3 className="text-lg font-semibold">{t('analysis.title')}</h3>
+        
+        <div className="flex gap-2">
+          {/* Chat-based analysis button - no device selection required */}
+          {hasChatContent && (
+            <button
+              onClick={performChatBasedAnalysis}
+              disabled={showAnalysis === true && !repairAnalysis}
+              className="bg-blue-500 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm px-3 py-1 rounded flex items-center gap-1"
+            >
+              <span>💬</span>
+              {(showAnalysis === true && !repairAnalysis) ? t('analysis.analyzing') : t('analysis.analyzeFromChat')}
+            </button>
+          )}
+          
+          {/* PDF-based analysis button */}
+          {uploadedPdf && hasDevice && (
+            <button
+              onClick={performPdfBasedAnalysis}
+              disabled={showAnalysis === true && !repairAnalysis}
+              className="bg-purple-500 hover:bg-purple-700 disabled:bg-gray-400 text-white text-sm px-3 py-1 rounded flex items-center gap-1"
+            >
+              <span>📄</span>
+              {(showAnalysis === true && !repairAnalysis) ? t('analysis.analyzing') : t('analysis.analyzeFromPdf')}
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Show current analysis mode */}
+      <div className="mb-3 text-xs text-gray-600">
+        {problemDescription && (
+          <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
+            <p className="font-medium text-blue-800">{t('analysis.detectedProblem')}:</p>
+            <p className="text-blue-700">"{problemDescription.length > 100 ? problemDescription.substring(0, 97) + '...' : problemDescription}"</p>
+          </div>
+        )}
+        
+        {uploadedPdf && (
+          <div className="bg-purple-50 border border-purple-200 rounded p-2 mb-2">
+            <p className="font-medium text-purple-800">{t('analysis.pdfAvailable')}: {uploadedPdf.title}</p>
+          </div>
+        )}
+        
+        {hasDevice && (
+          <div className="bg-green-50 border border-green-200 rounded p-2">
+            <p className="font-medium text-green-800">{t('analysis.selectedDevice')}: {selectedDevice.manufacturer} {selectedDevice.model}</p>
+          </div>
+        )}
+        
+        {!hasDevice && hasChatContent && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
+            <p className="font-medium text-yellow-800">{t('analysis.autoDetectDevice')}</p>
+          </div>
+        )}
       </div>
       
       {showAnalysis && repairAnalysis && (
         <div className="space-y-4">
+          {/* Analysis source and device info */}
+          {repairAnalysis.analysis_source && (
+            <div className="text-xs text-gray-500 italic">
+              {t('analysis.analysisSource')}: {repairAnalysis.analysis_source}
+            </div>
+          )}
+          
+          {/* Extracted device information */}
+          {repairAnalysis.device_info && (
+            <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+              <h4 className="font-medium text-blue-800 mb-2">{t('analysis.detectedDevice')}:</h4>
+              <div className="text-sm text-blue-700">
+                <p><strong>{t('analysis.manufacturer')}:</strong> {repairAnalysis.device_info.manufacturer}</p>
+                <p><strong>{t('analysis.model')}:</strong> {repairAnalysis.device_info.model}</p>
+                <p><strong>{t('analysis.category')}:</strong> {repairAnalysis.device_info.category}</p>
+                {repairAnalysis.device_info.confidence > 0 && (
+                  <p><strong>{t('analysis.confidence')}:</strong> {repairAnalysis.device_info.confidence}%</p>
+                )}
+                {repairAnalysis.device_info.extracted_text && (
+                  <p className="text-xs italic mt-1">
+                    <strong>{t('analysis.extractedFrom')}:</strong> "{repairAnalysis.device_info.extracted_text}"
+                  </p>
+                )}
+                <p className="text-xs mt-1">
+                  <strong>{t('analysis.detectionSource')}:</strong> {repairAnalysis.device_info.source}
+                </p>
+              </div>
+            </div>
+          )}
+          
           {/* Feasibility */}
           {repairAnalysis.feasibility && (
             <div className="border-l-4 border-blue-500 pl-4">
-              <h4 className="font-medium">Repair Feasibility</h4>
+              <h4 className="font-medium">{t('analysis.repairFeasibility')}</h4>
               <p className={`text-sm ${repairAnalysis.feasibility.is_feasible ? "text-green-600" : "text-red-600"}`}>
-                {repairAnalysis.feasibility.is_feasible ? "[YES] You can perform this repair" : "[NO] This repair may be too complex"}
+                {repairAnalysis.feasibility.is_feasible ? t('analysis.feasibleYes') : t('analysis.feasibleNo')}
               </p>
               <p className="text-xs text-gray-600">
-                Your skill: {repairAnalysis.feasibility.user_skill_score}/5 | Required: {repairAnalysis.feasibility.required_skill_score}/5
+                {t('analysis.skillComparison', {
+                  userSkill: repairAnalysis.feasibility.user_skill_score || 'N/A',
+                  requiredSkill: repairAnalysis.feasibility.required_skill_score || 'N/A'
+                })}
               </p>
-              {repairAnalysis.feasibility.warnings.length > 0 && (
+              {repairAnalysis.feasibility.warnings && repairAnalysis.feasibility.warnings.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-xs font-medium text-orange-600">Warnings:</p>
+                  <p className="text-xs font-medium text-orange-600">{t('analysis.warnings')}:</p>
                   <ul className="text-xs text-orange-600 list-disc list-inside">
                     {repairAnalysis.feasibility.warnings.map((warning, idx) => (
                       <li key={idx}>{warning}</li>
@@ -111,9 +274,9 @@ function RepairAnalysis({
                   </ul>
                 </div>
               )}
-              {repairAnalysis.feasibility.recommendations.length > 0 && (
+              {repairAnalysis.feasibility.recommendations && repairAnalysis.feasibility.recommendations.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-xs font-medium text-blue-600">Recommendations:</p>
+                  <p className="text-xs font-medium text-blue-600">{t('analysis.recommendations')}:</p>
                   <ul className="text-xs text-blue-600 list-disc list-inside">
                     {repairAnalysis.feasibility.recommendations.map((rec, idx) => (
                       <li key={idx}>{rec}</li>
@@ -125,27 +288,31 @@ function RepairAnalysis({
           )}
 
           {/* Cost & Time */}
-          {repairAnalysis.costs && repairAnalysis.time && (
+          {(repairAnalysis.costs || repairAnalysis.cost_estimate) && (
             <div className="border-l-4 border-green-500 pl-4">
-              <h4 className="font-medium">Cost & Time Estimate</h4>
-              <p className="text-sm">
-                [COST] Total Cost: €{repairAnalysis.costs.total_cost.toFixed(2)} 
-                (Tools: €{repairAnalysis.costs.tools_cost.toFixed(2)}, Parts: €{repairAnalysis.costs.parts_cost.toFixed(2)})
-              </p>
-              <p className="text-sm">
-                [TIME] Estimated Time: {repairAnalysis.time.total_time_hours.toFixed(1)} hours
-              </p>
-              {repairAnalysis.costs.tool_details && repairAnalysis.costs.tool_details.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs font-medium text-gray-700">Tool Details:</p>
-                  <ul className="text-xs text-gray-600 list-disc list-inside">
-                    {repairAnalysis.costs.tool_details.map((tool, idx) => (
-                      <li key={idx}>
-                        {tool.name}: €{tool.price.toFixed(2)} (Reusability: {tool.reusability_score}/5)
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              <h4 className="font-medium">{t('analysis.costTimeEstimate')}</h4>
+              {repairAnalysis.costs && (
+                <>
+                  <p className="text-sm">
+                    {t('analysis.totalCost')}: €{repairAnalysis.costs.total_cost.toFixed(2)} 
+                    ({t('analysis.tools')}: €{repairAnalysis.costs.tools_cost.toFixed(2)}, {t('analysis.parts')}: €{repairAnalysis.costs.parts_cost.toFixed(2)})
+                  </p>
+                  {repairAnalysis.time && (
+                    <p className="text-sm">
+                      {t('analysis.estimatedTime')}: {repairAnalysis.time.total_time_hours.toFixed(1)} {t('analysis.hours')}
+                    </p>
+                  )}
+                </>
+              )}
+              {repairAnalysis.cost_estimate && (
+                <p className="text-sm">
+                  {t('analysis.estimatedCostRange')}: €{repairAnalysis.cost_estimate}
+                </p>
+              )}
+              {repairAnalysis.time_estimate && (
+                <p className="text-sm">
+                  {t('analysis.estimatedTimeRange')}: {repairAnalysis.time_estimate}
+                </p>
               )}
             </div>
           )}
@@ -153,32 +320,47 @@ function RepairAnalysis({
           {/* Comparison */}
           {repairAnalysis.comparison && (
             <div className="border-l-4 border-yellow-500 pl-4">
-              <h4 className="font-medium">Self-Repair vs Professional</h4>
+              <h4 className="font-medium">{t('analysis.selfRepairVsProfessional')}</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <p className="font-medium">Self-Repair:</p>
-                  <p>Cost: €{repairAnalysis.comparison.self_repair.cost.toFixed(2)}</p>
-                  <p>Time: {repairAnalysis.comparison.self_repair.time.toFixed(1)}h</p>
+                  <p className="font-medium">{t('analysis.selfRepair')}:</p>
+                  <p>{t('analysis.cost')}: €{repairAnalysis.comparison.self_repair.cost.toFixed(2)}</p>
+                  <p>{t('analysis.time')}: {repairAnalysis.comparison.self_repair.time.toFixed(1)}h</p>
                   <p className={`text-xs ${repairAnalysis.comparison.self_repair.feasible ? "text-green-600" : "text-red-600"}`}>
-                    {repairAnalysis.comparison.self_repair.feasible ? "[YES] Feasible" : "[NO] Not recommended"}
+                    {repairAnalysis.comparison.self_repair.feasible ? t('analysis.feasible') : t('analysis.notRecommended')}
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium">Professional:</p>
-                  <p>Cost: €{repairAnalysis.comparison.professional_service.cost.toFixed(2)}</p>
-                  <p>Time: {repairAnalysis.comparison.professional_service.time.toFixed(1)}h</p>
-                  <p className="text-xs text-green-600">[YES] Guaranteed</p>
+                  <p className="font-medium">{t('analysis.professional')}:</p>
+                  <p>{t('analysis.cost')}: €{repairAnalysis.comparison.professional_service.cost.toFixed(2)}</p>
+                  <p>{t('analysis.time')}: {repairAnalysis.comparison.professional_service.time.toFixed(1)}h</p>
+                  <p className="text-xs text-green-600">{t('analysis.guaranteed')}</p>
                 </div>
               </div>
               <p className={`text-sm font-medium mt-2 ${
                 repairAnalysis.comparison.recommendation === "self_repair" ? "text-green-600" : "text-blue-600"
               }`}>
-[RECOMMEND] {repairAnalysis.comparison.recommendation === "self_repair" ? "Do it yourself" : "Use professional service"}
+                {t('analysis.recommendation')}: {repairAnalysis.comparison.recommendation === "self_repair" ? t('analysis.doItYourself') : t('analysis.useProfessional')}
               </p>
-              <div className="mt-2 text-xs text-gray-600">
-                <p>Cost difference: €{repairAnalysis.comparison.cost_difference.toFixed(2)}</p>
-                <p>Time difference: {repairAnalysis.comparison.time_difference.toFixed(1)}h</p>
-              </div>
+            </div>
+          )}
+
+          {/* Additional analysis info from chat-based analysis */}
+          {repairAnalysis.problem_summary && (
+            <div className="border-l-4 border-indigo-500 pl-4">
+              <h4 className="font-medium">{t('analysis.problemSummary')}</h4>
+              <p className="text-sm text-gray-700">{repairAnalysis.problem_summary}</p>
+            </div>
+          )}
+
+          {repairAnalysis.suggested_solutions && repairAnalysis.suggested_solutions.length > 0 && (
+            <div className="border-l-4 border-teal-500 pl-4">
+              <h4 className="font-medium">{t('analysis.suggestedSolutions')}</h4>
+              <ul className="text-sm text-gray-700 list-disc list-inside">
+                {repairAnalysis.suggested_solutions.map((solution, idx) => (
+                  <li key={idx}>{solution}</li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

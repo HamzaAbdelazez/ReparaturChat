@@ -635,15 +635,6 @@ function ReparaturApp() {
             onManageDevices={() => setShowDeviceManager(true)}
           />
 
-          <RepairAnalysis
-            uploadedPdf={uploadedPdf}
-            selectedDevice={selectedDevice}
-            userId={userId}
-            showAnalysis={showAnalysis}
-            repairAnalysis={repairAnalysis}
-            onPerformAnalysis={handleRepairAnalysis}
-          />
-
           <ChatInterface
             question={question}
             onQuestionChange={setQuestion}
@@ -651,6 +642,16 @@ function ReparaturApp() {
             onSend={handleSend}
             isLoading={isLoading}
             rating={rating}
+          />
+
+          <RepairAnalysis
+            uploadedPdf={uploadedPdf}
+            selectedDevice={selectedDevice}
+            userId={userId}
+            showAnalysis={showAnalysis}
+            repairAnalysis={repairAnalysis}
+            onPerformAnalysis={handleRepairAnalysis}
+            chatHistory={history}
           />
         </div>
       </div>
