@@ -59,8 +59,8 @@
     "noSearchResults": "Keine Unterhaltungen gefunden für \"{{query}}\""
   },
   "tips": {
-    "general": "💡 **Tipp:** Laden Sie ein Reparaturhandbuch-PDF für spezifische Anleitung hoch oder stellen Sie allgemeine Reparaturfragen!",
-    "pdfMode": "📄 **PDF-Modus:** Stellen Sie Fragen zu Ihrem hochgeladenen Handbuch: \"{{title}}\""
+    "general": "Laden Sie ein Reparaturhandbuch-PDF für spezifische Anleitung hoch oder stellen Sie allgemeine Reparaturfragen!",
+    "pdfMode": " Stellen Sie Fragen zu Ihrem hochgeladenen Handbuch: \"{{title}}\""
   },
   "errors": {
     "loginRequired": "Bitte melden Sie sich zuerst an",

@@ -1,5 +1,10 @@
 import re
+import asyncio
 from typing import List, Dict
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from api.database.table_models import Tool
+from api.service.tool_pricing import ToolPricingService
 
 def extract_tools_from_text(text: str) -> List[str]:
     """
@@ -90,6 +95,19 @@ def _is_valid_tool_name(name: str) -> bool:
         r'\(.*text.*\)',
         r'\(.*missing.*\)',
         r'\(.*unclear.*\)',
+        # New patterns for your specific issues
+        r'\bdisplays?\b.*\berror\b',
+        r'\bclears?\b.*\berror\b',
+        r'\bsoftware\b.*\bversion\b',
+        r'\bexits?\b.*\bmode\b',
+        r'\bactivates?\b.*\bhuman\b',
+        r'\bmomentary\s+press\b',
+        r'\bsuccessfully\s+perform\b',
+        r'\bimportant\s+note\b',
+        r'\bsee\s+.*\babove\b',
+        r'^\d+\s*vdc$',  # voltage readings
+        r'\berror\s+codes?\b',
+        r'\bdiagnostic\s+mode\b',
     ]
     
     name_lower = name.lower()
@@ -101,18 +119,84 @@ def _is_valid_tool_name(name: str) -> bool:
     non_tool_words = ['required', 'needed', 'parts', 'tools', 'steps', 'procedure', 'instructions', 
                       'empty', 'pockets', 'activate', 'activated', 'deactivate', 'deactivated',
                       'disconnect', 'unplug', 'remove', 'check', 'verify', 'ensure', 'turn',
-                      'switch', 'press', 'hold', 'wait', 'note', 'warning', 'caution']
+                      'switch', 'press', 'hold', 'wait', 'note', 'warning', 'caution',
+                      # New additions for your specific case
+                      'displays', 'clears', 'exits', 'activates', 'or', 'successfully', 'perform',
+                      'necessary', 'repairs', 'see', 'important', 'above', 'mode', 'error',
+                      'codes', 'software', 'version', 'display', 'human', 'momentary', 'vdc']
     if name_lower in non_tool_words:
         return False
     
     # Skip if it contains common action verbs that indicate it's an instruction, not a tool
     action_verbs = ['empty', 'remove', 'disconnect', 'unplug', 'turn', 'switch', 'press', 'hold',
-                   'check', 'verify', 'ensure', 'make', 'take', 'put', 'place', 'position']
+                   'check', 'verify', 'ensure', 'make', 'take', 'put', 'place', 'position',
+                   'displays', 'clears', 'exits', 'activates', 'perform']
     words = name_lower.split()
     if len(words) > 1 and words[0] in action_verbs:
         return False
     
+    # Only allow names that contain actual tool keywords
+    tool_keywords = [
+        'screwdriver', 'wrench', 'pliers', 'hammer', 'drill', 'bit', 'bits', 'driver',
+        'spanner', 'key', 'allen', 'hex', 'torx', 'socket', 'ratchet',
+        'multimeter', 'meter', 'tester', 'probe', 'wire', 'cable', 'stripper',
+        'iron', 'solder', 'flux', 'pump', 'sucker', 'wick',
+        'knife', 'blade', 'cutter', 'scissors', 'snips',
+        'tweezers', 'forceps', 'clamp', 'vice', 'grip',
+        'pry', 'spudger', 'pick', 'tool', 'kit', 'set',
+        'brush', 'cloth', 'cleaner', 'lubricant', 'oil', 'grease',
+        'tape', 'adhesive', 'glue', 'epoxy',
+        'file', 'sandpaper', 'emery', 'steel wool'
+    ]
+    
+    # Check if any tool keyword appears in the name
+    has_tool_keyword = any(keyword in name_lower for keyword in tool_keywords)
+    if not has_tool_keyword:
+        return False
+    
     return True
+
+async def ensure_tool_has_prices(tool_id: str, db: AsyncSession) -> None:
+    """
+    Ensure a tool has price data by calling the pricing service.
+    """
+    try:
+        pricing_service = ToolPricingService(db)
+        await pricing_service.update_tool_prices(tool_id)
+    except Exception as e:
+        print(f"Warning: Could not update prices for tool {tool_id}: {e}")
+
+async def create_or_get_tool(tool_name: str, db: AsyncSession) -> Tool:
+    """
+    Create a new tool or get existing one, ensuring it has prices.
+    """
+    # Check if tool already exists
+    result = await db.execute(select(Tool).where(Tool.name == tool_name))
+    existing_tool = result.scalar_one_or_none()
+    
+    if existing_tool:
+        # Check if tool needs price update (null prices)
+        if existing_tool.min_price is None or existing_tool.max_price is None:
+            await ensure_tool_has_prices(existing_tool.id, db)
+        return existing_tool
+    
+    # Create new tool
+    details = get_tool_details(tool_name)
+    new_tool = Tool(
+        name=tool_name,
+        description=details["description"],
+        reusability_score=details["reusability_score"],
+        category=details["category"]
+    )
+    
+    db.add(new_tool)
+    await db.commit()
+    await db.refresh(new_tool)
+    
+    # Add prices for new tool
+    await ensure_tool_has_prices(new_tool.id, db)
+    
+    return new_tool
 
 def get_tool_details(tool_name: str) -> Dict:
     """

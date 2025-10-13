@@ -55,12 +55,36 @@ function ReparaturApp() {
       // Reset conversation state on page refresh for clean start
       setHistory([]);
       setCurrentConversationId(null);
-      setUploadedPdf(null);
-      setFile(null);
-      setUploadStatus("not_uploaded");
+      // Keep PDF persistent - only reset on manual user action
+      // setUploadedPdf(null);
+      // setFile(null);
+      // setUploadStatus("not_uploaded");
       setTools([]);
       setRepairAnalysis(null);
       setShowAnalysis(false);
+      
+      // Load persistent PDF from localStorage if available and belongs to current user
+      const savedPdf = localStorage.getItem('uploadedPdf');
+      if (savedPdf) {
+        try {
+          const parsedPdf = JSON.parse(savedPdf);
+          // Verify PDF belongs to current user before loading
+          if (parsedPdf.user_id === parsed.id) {
+            setUploadedPdf(parsedPdf);
+            setUploadStatus('uploaded');
+            // Load tools for the persistent PDF
+            loadToolsForPdf(parsedPdf.id);
+          } else {
+            // PDF belongs to different user, clear it
+            localStorage.removeItem('uploadedPdf');
+            setUploadedPdf(null);
+            setUploadStatus('not_uploaded');
+          }
+        } catch (error) {
+          console.error('Error loading persistent PDF:', error);
+          localStorage.removeItem('uploadedPdf');
+        }
+      }
       
       loadUserDevices(parsed.id);
       loadConversations(parsed.id);
@@ -199,7 +223,7 @@ function ReparaturApp() {
       );
 
       if (response.ok) {
-        // Clear PDF-related state
+        // Clear PDF-related state and remove from localStorage
         setUploadedPdf(null);
         setFile(null);
         setUploadStatus("not_uploaded");
@@ -207,12 +231,17 @@ function ReparaturApp() {
         setRepairAnalysis(null);
         setShowAnalysis(false);
         
-        console.log("PDF deleted successfully");
+        // Remove PDF from localStorage
+        localStorage.removeItem('uploadedPdf');
+        
+        alert("PDF deleted successfully!");
       } else {
-        console.error("Failed to delete PDF");
+        const errorData = await response.json();
+        alert(`Failed to delete PDF: ${errorData.detail || 'Unknown error'}`);
       }
     } catch (error) {
       console.error("Error deleting PDF:", error);
+      alert("Failed to delete PDF. Please try again.");
     }
   };
 
@@ -251,6 +280,9 @@ function ReparaturApp() {
         const data = await response.json();
         setUploadedPdf(data);
         setUploadStatus("uploaded");
+        
+        // Save PDF to localStorage for persistence
+        localStorage.setItem('uploadedPdf', JSON.stringify(data));
         
         // Load tools immediately after successful upload
         loadToolsForPdf(data.id);
@@ -296,6 +328,29 @@ function ReparaturApp() {
       console.error("Upload failed:", error);
       setUploadStatus("error");
     }
+  };
+
+  // Sign out and clear user data
+  const handleSignOut = () => {
+    // Clear all localStorage data
+    localStorage.removeItem('user');
+    localStorage.removeItem('uploadedPdf');
+    
+    // Clear all state
+    setUserId(null);
+    setUploadedPdf(null);
+    setFile(null);
+    setUploadStatus("not_uploaded");
+    setHistory([]);
+    setTools([]);
+    setUserDevices([]);
+    setSelectedDevice(null);
+    setRepairAnalysis(null);
+    setConversations([]);
+    setCurrentConversationId(null);
+    
+    // Navigate to login
+    navigate("/");
   };
 
   // Generate conversation title from message
@@ -448,12 +503,6 @@ function ReparaturApp() {
       setRepairAnalysis(analysisData);
       setShowAnalysis(true);
     }
-  };
-
-  // Logout
-  const handleSignOut = () => {
-    localStorage.removeItem("user");
-    navigate("/");
   };
 
   return (

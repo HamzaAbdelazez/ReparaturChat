@@ -88,14 +88,6 @@ class UploadedPdf(Base):
     "DocumentTool", back_populates="document", cascade="all, delete-orphan"
 )
 
-    # One-to-one: each PDF has one tools/parts record
-    # tools_parts: Mapped["DocumentToolsParts"] = relationship(
-    #     "DocumentToolsParts",
-    #     back_populates="document",
-    #     uselist=False,
-    #     cascade="all, delete-orphan"
-    # )
-
 
 # ================= DOCUMENT CHUNKS =================
 class DocumentChunk(Base):
