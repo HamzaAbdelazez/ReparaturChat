@@ -64,7 +64,7 @@ python -c "import sys; sys.path.append('src'); import uvicorn; uvicorn.run('api.
 
 #### Step 3: Setup Frontend
 ```bash
-cd ../Reparatur-app
+cd ../frontend
 npm install
 npm run dev
 ```

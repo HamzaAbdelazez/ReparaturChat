@@ -1,6 +1,6 @@
 /.vscode/
 /node_modules/
-/Reparatur-app/node_modules/
+/frontend/node_modules/
 
 # Python cache files
 __pycache__/

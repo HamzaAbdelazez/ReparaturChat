@@ -82,7 +82,7 @@ chmod +x run-mac.sh
 
 ```
 ReparaturApp/
-├── 📁 Reparatur-app/          # Frontend React application
+├── 📁 frontend/          # Frontend React application
 │   ├── 📁 src/
 │   │   ├── 📁 components/      # React components
 │   │   ├── 📁 pages/          # Page components
@@ -211,7 +211,7 @@ REPLICATE_API_TOKEN=your_replicate_token_here
 
 4. **Frontend setup**
    ```bash
-   cd ../Reparatur-app
+   cd ../frontend
    npm install
    npm run dev
    ```
@@ -257,7 +257,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://test:password@db:5432/reparatur
 
   frontend:
-    build: ./Reparatur-app
+    build: ./frontend
     ports:
       - "80:80"
     depends_on:

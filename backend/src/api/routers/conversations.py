@@ -173,23 +173,21 @@ async def delete_conversation(
 ):
     """Delete a conversation and all its messages."""
     try:
-        from sqlalchemy import select
-        
-        conversation_query = select(Conversation).filter(Conversation.id == conversation_id)
-        conversation_result = await db.execute(conversation_query)
-        conversation = conversation_result.scalar_one_or_none()
-        
+        # Load the conversation including messages
+        conversation = await db.get(Conversation, conversation_id)
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        
-        db.delete(conversation)
+
+        # This will delete all related messages because of cascade="all, delete-orphan"
+        await db.delete(conversation)
         await db.commit()
-        
+
         return {"message": "Conversation deleted successfully"}
-        
+
     except Exception as e:
         logger.exception("Error deleting conversation")
         raise HTTPException(status_code=500, detail="Failed to delete conversation")
+
 
 
 @router.post("/{conversation_id}/upload-pdf")

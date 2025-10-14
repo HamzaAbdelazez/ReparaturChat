@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "ReparaturApp",
+    "title": "Repair App",
     "subtitle": "Repair instead of replace.",
     "description": "Upload a repair manual or ask a general question.",
     "descriptionWithPdf": "Ask questions about your repair manual: \"{{title}}\" or get general repair advice."
@@ -56,7 +56,15 @@
     "active": "Active",
     "new": "New",
     "messages": "{{count}} messages",
-    "noSearchResults": "No conversations found for \"{{query}}\""
+    "noSearchResults": "No conversations found for \"{{query}}\"",
+    "deleteConfirmation": "Are you sure you want to delete \"{{title}}\"?",
+    "deleted": "Conversation \"{{title}}\" deleted successfully!",
+    "deleteFailed": "Failed to delete conversation",
+    "delete": "Delete conversation",
+    "deleteTitle": "Delete Conversation",
+    "deleteButton": "Delete",
+    "cancel": "Cancel",
+    "untitled": "No title"
   },
   "tips": {
     "general": " Upload a repair manual PDF for specific guidance, or ask general repair questions!",
@@ -72,11 +80,35 @@
     "loadMessagesFailed": "Error loading conversation messages",
     "sendMessageFailed": "Failed to send message",
     "loadToolsFailed": "Failed to load tools",
-    "analyzeToolFailed": "Failed to analyze tool reusability"
+    "analyzeToolFailed": "Failed to analyze tool reusability",
+    "addDeviceFailed": "Failed to add device",
+    "fillAllFields": "Please fill in all required fields",
+    "createDeviceFailed": "Failed to create device",
+    "selectPdfFile": "Please select a PDF file",
+    "checkWarrantyFailed": "Failed to check warranty"
   },
   "devices": {
     "selector": "Device Selector",
-    "manage": "Manage Devices"
+    "manage": "Manage My Devices",
+    "addExisting": "Add Existing Device",
+    "searchPlaceholder": "Search by manufacturer or model...",
+    "search": "Search",
+    "purchaseDateOptional": "Purchase Date (optional)",
+    "addNewDevice": "Add New Device Model",
+    "cancel": "Cancel",
+    "createNew": "Create New",
+    "manufacturerPlaceholder": "Manufacturer (e.g., Samsung, Apple)",
+    "modelPlaceholder": "Model (e.g., Galaxy S21, iPhone 13)",
+    "selectCategory": "Select Category",
+    "creating": "Creating...",
+    "createAndAdd": "Create & Add Device",
+    "myDevices": "My Devices",
+    "noDevicesYet": "No devices added yet.",
+    "purchased": "Purchased",
+    "warrantyStatus": "Warranty Status",
+    "validUntil": "Valid until",
+    "daysRemaining": "Days remaining",
+    "warrantyExpired": "Warranty has expired"
   },
   "analysis": {
     "title": "Repair Analysis",

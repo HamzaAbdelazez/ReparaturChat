@@ -19,8 +19,9 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    lng: 'de', // <- default language is German
     resources,
-    fallbackLng: 'en',
+    fallbackLng: 'de',
     debug: false,
     interpolation: {
       escapeValue: false

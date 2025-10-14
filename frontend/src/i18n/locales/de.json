@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "ReparaturApp",
+    "title": "Reparatur App",
     "subtitle": "Reparieren statt ersetzen.",
     "description": "Laden Sie ein Reparaturhandbuch hoch oder stellen Sie eine allgemeine Frage.",
     "descriptionWithPdf": "Stellen Sie Fragen zu Ihrem Reparaturhandbuch: \"{{title}}\" oder erhalten Sie allgemeine Reparaturberatung."
@@ -56,7 +56,15 @@
     "active": "Aktiv",
     "new": "Neu",
     "messages": "{{count}} Nachrichten",
-    "noSearchResults": "Keine Unterhaltungen gefunden für \"{{query}}\""
+    "noSearchResults": "Keine Unterhaltungen gefunden für \"{{query}}\"",
+    "deleteConfirmation": "Sind Sie sicher, dass Sie \"{{title}}\" löschen möchten?",
+    "deleted": "Unterhaltung \"{{title}}\" erfolgreich gelöscht!",
+    "deleteFailed": "Unterhaltung löschen fehlgeschlagen",
+    "delete": "Unterhaltung löschen",
+    "deleteTitle": "Unterhaltung löschen",
+    "deleteButton": "Löschen",
+    "cancel": "Abbrechen",
+    "untitled": "Kein Titel"
   },
   "tips": {
     "general": "Laden Sie ein Reparaturhandbuch-PDF für spezifische Anleitung hoch oder stellen Sie allgemeine Reparaturfragen!",
@@ -72,11 +80,35 @@
     "loadMessagesFailed": "Fehler beim Laden der Unterhaltungsnachrichten",
     "sendMessageFailed": "Nachricht senden fehlgeschlagen",
     "loadToolsFailed": "Werkzeuge laden fehlgeschlagen",
-    "analyzeToolFailed": "Werkzeug-Wiederverwendbarkeitsanalyse fehlgeschlagen"
+    "analyzeToolFailed": "Werkzeug-Wiederverwendbarkeitsanalyse fehlgeschlagen",
+    "addDeviceFailed": "Gerät hinzufügen fehlgeschlagen",
+    "fillAllFields": "Bitte füllen Sie alle Pflichtfelder aus",
+    "createDeviceFailed": "Gerät erstellen fehlgeschlagen",
+    "selectPdfFile": "Bitte wählen Sie eine PDF-Datei aus",
+    "checkWarrantyFailed": "Garantieprüfung fehlgeschlagen"
   },
   "devices": {
     "selector": "Gerätewahl",
-    "manage": "Geräte verwalten"
+    "manage": "Meine Geräte verwalten",
+    "addExisting": "Vorhandenes Gerät hinzufügen",
+    "searchPlaceholder": "Suche nach Hersteller oder Modell...",
+    "search": "Suchen",
+    "purchaseDateOptional": "Kaufdatum (optional)",
+    "addNewDevice": "Neues Gerätemodell hinzufügen",
+    "cancel": "Abbrechen",
+    "createNew": "Neu erstellen",
+    "manufacturerPlaceholder": "Hersteller (z.B. Samsung, Apple)",
+    "modelPlaceholder": "Modell (z.B. Galaxy S21, iPhone 13)",
+    "selectCategory": "Kategorie auswählen",
+    "creating": "Erstelle...",
+    "createAndAdd": "Erstellen & Gerät hinzufügen",
+    "myDevices": "Meine Geräte",
+    "noDevicesYet": "Noch keine Geräte hinzugefügt.",
+    "purchased": "Gekauft",
+    "warrantyStatus": "Garantiestatus",
+    "validUntil": "Gültig bis",
+    "daysRemaining": "Verbleibende Tage",
+    "warrantyExpired": "Garantie ist abgelaufen"
   },
   "analysis": {
     "title": "Reparaturanalyse",

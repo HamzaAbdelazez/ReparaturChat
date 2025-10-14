@@ -134,7 +134,7 @@ if ! curl -s http://127.0.0.1:8000/docs > /dev/null; then
 fi
 
 print_status 4 6 "Installing frontend dependencies..."
-cd ../Reparatur-app
+cd ../frontend
 
 if [ ! -d "node_modules" ]; then
     print_status 4 6 "Installing npm packages..."

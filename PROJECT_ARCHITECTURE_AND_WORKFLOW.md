@@ -27,7 +27,7 @@ The Reparatur project is a bilingual repair assistance application that combines
 
 ```
 Reparatur/
-├── Reparatur-app/                    # Frontend React Application
+├── frontend/                    # Frontend React Application
 │   ├── src/
 │   │   ├── pages/                    # Main application pages
 │   │   │   ├── login.jsx            # User authentication
@@ -36,7 +36,6 @@ Reparatur/
 │   │   │   └── chatbot-refactored.jsx # Improved chat interface
 │   │   ├── components/              # Reusable React components
 │   │   │   ├── ChatInterface.jsx    # Basic chat component
-│   │   │   ├── ChatInterfaceWithPDF.jsx # Chat with PDF upload
 │   │   │   ├── DeviceManager.jsx    # Device management
 │   │   │   ├── DeviceSelector.jsx   # Device selection UI
 │   │   │   ├── DocumentUpload.jsx   # PDF upload component
@@ -113,13 +112,13 @@ Reparatur/
 
 ### Frontend Files
 
-#### Pages (`Reparatur-app/src/pages/`)
+#### Pages (`frontend/src/pages/`)
 - **`login.jsx`**: User authentication interface with form validation
 - **`signup.jsx`**: User registration with password confirmation
 - **`chatbot.jsx`**: Original chat interface implementation
 - **`chatbot-refactored.jsx`**: Enhanced chat interface with improved UX
 
-#### Components (`Reparatur-app/src/components/`)
+#### Components (`frontend/src/components/`)
 - **`ChatInterface.jsx`**: Core chat functionality and message handling
 - **`ChatInterfaceWithPDF.jsx`**: Chat interface integrated with PDF upload
 - **`DeviceManager.jsx`**: Device selection and management interface
@@ -301,7 +300,7 @@ Users ←→ UploadedPDFs ←→ DocumentChunks
 ### Local Development Setup
 ```bash
 # Frontend
-cd Reparatur-app
+cd frontend
 npm install
 npm run dev  # http://localhost:5173
 

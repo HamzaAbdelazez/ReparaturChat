@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, X } from "lucide-react";
 
 function DeviceManager({ userId, onDeviceAdded, onClose }) {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,7 +76,7 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
       }
     } catch (error) {
       console.error("Error adding device:", error);
-      alert("Failed to add device");
+      alert(t('errors.addDeviceFailed'));
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
   // Create new device model
   const createNewDevice = async () => {
     if (!newDevice.manufacturer || !newDevice.model || !newDevice.category) {
-      alert("Please fill in all required fields");
+      alert(t('errors.fillAllFields'));
       return;
     }
 
@@ -126,7 +128,7 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
       }
     } catch (error) {
       console.error("Error creating device:", error);
-      alert("Failed to create device");
+      alert(t('errors.createDeviceFailed'));
     } finally {
       setLoading(false);
     }
@@ -151,7 +153,7 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto mx-4">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Manage My Devices</h2>
+            <h2 className="text-xl font-bold">{t('devices.manage')}</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <X size={24} />
             </button>
@@ -159,11 +161,11 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
 
           {/* Search Section */}
           <div className="mb-6">
-            <h3 className="text-lg font-medium mb-2">Add Existing Device</h3>
+            <h3 className="text-lg font-medium mb-2">{t('devices.addExisting')}</h3>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
-                placeholder="Search by manufacturer or model..."
+                placeholder={t('devices.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
@@ -172,14 +174,14 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
                 onClick={searchDevices}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
               >
-                Search
+                {t('devices.search')}
               </button>
             </div>
 
             {/* Purchase Date for existing devices */}
             <input
               type="date"
-              placeholder="Purchase Date (optional)"
+              placeholder={t('devices.purchaseDateOptional')}
               value={newDevice.purchaseDate}
               onChange={(e) => setNewDevice({ ...newDevice, purchaseDate: e.target.value })}
               className="w-full px-3 py-2 border rounded focus:outline-none focus:border-blue-500 mb-2"
@@ -208,12 +210,12 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
           {/* Add New Device Section */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-medium">Add New Device Model</h3>
+              <h3 className="text-lg font-medium">{t('devices.addNewDevice')}</h3>
               <button
                 onClick={() => setShowAddDevice(!showAddDevice)}
                 className="text-blue-500 hover:text-blue-700 text-sm"
               >
-                {showAddDevice ? "Cancel" : "Create New"}
+                {showAddDevice ? t('devices.cancel') : t('devices.createNew')}
               </button>
             </div>
 
@@ -221,14 +223,14 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
               <div className="border rounded p-4 space-y-3">
                 <input
                   type="text"
-                  placeholder="Manufacturer (e.g., Samsung, Apple)"
+                  placeholder={t('devices.manufacturerPlaceholder')}
                   value={newDevice.manufacturer}
                   onChange={(e) => setNewDevice({ ...newDevice, manufacturer: e.target.value })}
                   className="w-full px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
                 />
                 <input
                   type="text"
-                  placeholder="Model (e.g., Galaxy S21, iPhone 13)"
+                  placeholder={t('devices.modelPlaceholder')}
                   value={newDevice.model}
                   onChange={(e) => setNewDevice({ ...newDevice, model: e.target.value })}
                   className="w-full px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
@@ -238,14 +240,14 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
                   onChange={(e) => setNewDevice({ ...newDevice, category: e.target.value })}
                   className="w-full px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
                 >
-                  <option value="">Select Category</option>
+                  <option value="">{t('devices.selectCategory')}</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
                 <input
                   type="date"
-                  placeholder="Purchase Date (optional)"
+                  placeholder={t('devices.purchaseDateOptional')}
                   value={newDevice.purchaseDate}
                   onChange={(e) => setNewDevice({ ...newDevice, purchaseDate: e.target.value })}
                   className="w-full px-3 py-2 border rounded focus:outline-none focus:border-blue-500"
@@ -255,7 +257,7 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
                   disabled={loading}
                   className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 disabled:opacity-50"
                 >
-                  {loading ? "Creating..." : "Create & Add Device"}
+                  {loading ? t('devices.creating') : t('devices.createAndAdd')}
                 </button>
               </div>
             )}
@@ -263,9 +265,9 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
 
           {/* Current Devices */}
           <div>
-            <h3 className="text-lg font-medium mb-2">My Devices ({devices.length})</h3>
+            <h3 className="text-lg font-medium mb-2">{t('devices.myDevices')} ({devices.length})</h3>
             {devices.length === 0 ? (
-              <p className="text-gray-500 italic">No devices added yet.</p>
+              <p className="text-gray-500 italic">{t('devices.noDevicesYet')}</p>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {devices.map((userDevice) => (
@@ -278,7 +280,7 @@ function DeviceManager({ userId, onDeviceAdded, onClose }) {
                         <p className="text-sm text-gray-600">{userDevice.device?.category}</p>
                         {userDevice.purchase_date && (
                           <p className="text-xs text-gray-500">
-                            Purchased: {new Date(userDevice.purchase_date).toLocaleDateString()}
+                            {t('devices.purchased')}: {new Date(userDevice.purchase_date).toLocaleDateString()}
                           </p>
                         )}
                       </div>

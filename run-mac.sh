@@ -119,7 +119,7 @@ EOF
 sleep 8
 
 print_status 4 6 "Installing frontend dependencies..."
-cd ../Reparatur-app
+cd ../frontend
 
 if [ ! -d "node_modules" ]; then
     print_status 4 6 "Installing npm packages..."

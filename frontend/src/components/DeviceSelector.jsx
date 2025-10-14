@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 function DeviceSelector({ 
   userDevices, 
@@ -7,37 +8,40 @@ function DeviceSelector({
   onManageDevices, 
   onCheckWarranty 
 }) {
+  const { t } = useTranslation();
+  
   const checkWarranty = async (userDeviceId) => {
     try {
       const response = await fetch(`http://localhost:8000/devices/warranty-check/${userDeviceId}`);
       if (response.ok) {
         const warranty = await response.json();
-        alert(`Warranty Status: ${warranty.warranty_status}\n${
+        alert(`${t('devices.warrantyStatus')}: ${warranty.warranty_status}\n${
           warranty.is_under_warranty 
-            ? `Valid until: ${new Date(warranty.warranty_expires_at).toLocaleDateString()}\nDays remaining: ${warranty.days_remaining}`
-            : "Warranty has expired"
+            ? `${t('devices.validUntil')}: ${new Date(warranty.warranty_expires_at).toLocaleDateString()}\n${t('devices.daysRemaining')}: ${warranty.days_remaining}`
+            : t('devices.warrantyExpired')
         }`);
       }
     } catch (error) {
       console.error("Error checking warranty:", error);
-      alert("Failed to check warranty");
+      alert(t('errors.checkWarrantyFailed'));
     }
   };
 
   return (
     <div className="bg-white p-4 rounded-xl shadow-md mb-6">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold">My Devices</h3>
+        <h3 className="text-lg font-semibold">{t('devices.myDevices')}</h3>
         <button
           onClick={onManageDevices}
           className="bg-green-500 hover:bg-green-700 text-white text-sm px-3 py-1 rounded"
         >
-          Manage
+          {t('devices.manage')}
         </button>
       </div>
       
       {userDevices.length === 0 ? (
-        <p className="text-gray-500 italic">No devices added yet.</p>
+        <p className="text-gray-500 italic">{t('devices.noDevices')}</p>
+
       ) : (
         <div className="space-y-2">
           {userDevices.map((userDevice) => (
