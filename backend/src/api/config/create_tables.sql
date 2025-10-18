@@ -27,12 +27,3 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     embedding vector(384)  
     
 );
-
--- Tools & Parts table
--- CREATE TABLE IF NOT EXISTS document_tools_parts (
---     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
---     document_id UUID NOT NULL REFERENCES uploaded_pdfs(id) ON DELETE CASCADE,
---     tools TEXT[] DEFAULT '{}',
---     parts TEXT[] DEFAULT '{}',
---     UNIQUE (document_id)
--- );
