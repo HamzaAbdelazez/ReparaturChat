@@ -1,314 +1,186 @@
-# ReparaturApp - Intelligent Repair Assistant
+# Reparatur Platform
 
-A bilingual repair assistance application that combines React frontend with FastAPI backend, using RAG (Retrieval-Augmented Generation) to provide intelligent repair guidance based on uploaded PDF manuals.
+An AI-powered repair analysis platform that provides cost estimation, feasibility assessment, and tool recommendations for device repairs.
+
+## 🏗️ Project Structure
+
+```
+reparatur-platform/
+├── backend/                    # FastAPI backend service
+│   ├── src/
+│   │   └── api/
+│   │       ├── config/        # Configuration and database setup
+│   │       ├── database/      # Database models and repositories
+│   │       ├── models/        # Pydantic models
+│   │       ├── routers/       # API endpoints
+│   │       ├── service/       # Business logic
+│   │       └── shared/        # Shared utilities
+│   ├── tests/                 # Backend tests
+│   ├── Dockerfile
+│   ├── pyproject.toml         # Python dependencies
+│   └── README.md
+├── frontend/                   # React frontend application
+│   ├── src/
+│   │   ├── components/        # React components
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── pages/            # Page components
+│   │   ├── services/         # API services
+│   │   └── utils/            # Utility functions
+│   ├── public/               # Static assets
+│   ├── package.json          # Node.js dependencies
+│   └── README.md
+├── docs/                      # Project documentation
+├── docker-compose.yml         # Full-stack Docker setup
+├── package.json              # Root package.json for scripts
+└── README.md                 # This file
+```
 
 ## 🚀 Quick Start
 
-### Windows
-```cmd
-# Double-click or run in Command Prompt
-run.bat
-```
+### Prerequisites
 
-### Linux/Unix
+- **Node.js** (≥18.0.0)
+- **Python** (≥3.11)
+- **Poetry** (for Python dependency management)
+- **Docker** (optional, for containerized deployment)
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd reparatur-platform
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm run setup
+   ```
+
+3. **Start the development servers**
+   ```bash
+   npm run dev
+   ```
+
+   This will start:
+   - Backend API at `http://localhost:8000`
+   - Frontend at `http://localhost:5173`
+
+### Docker Setup (Alternative)
+
 ```bash
-chmod +x run.sh
-./run.sh
+# Start all services
+docker-compose up -d
+
+# Stop all services
+docker-compose down
 ```
 
-### macOS
+## 🛠️ Development
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start both frontend and backend in development mode |
+| `npm run dev:frontend` | Start only the frontend |
+| `npm run dev:backend` | Start only the backend |
+| `npm run build` | Build the frontend for production |
+| `npm run test` | Run tests for both frontend and backend |
+| `npm run lint` | Lint both frontend and backend code |
+| `npm run docker:up` | Start services with Docker |
+| `npm run setup` | Install all dependencies |
+
+### Backend Development
+
 ```bash
-chmod +x run-mac.sh
-./run-mac.sh
+cd backend
+poetry install                    # Install dependencies
+poetry run uvicorn api.main:app --app-dir src --reload  # Start dev server
+poetry run pytest                 # Run tests
+poetry run ruff check .           # Lint code
 ```
 
-## 📋 Prerequisites
+### Frontend Development
 
-- **Python 3.10+** (with pip)
-- **Node.js 16+** (with npm)
-- **Docker Desktop** (for PostgreSQL)
-- **Git** (for version control)
-
-### Optional but Recommended
-- **Poetry** (Python dependency management)
-- **PostgreSQL client** (for database inspection)
-
-## 🏗️ Architecture Overview
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │    │   Database      │
-│  (React + Vite) │◄──►│ (FastAPI)       │◄──►│ (PostgreSQL +   │
-│                 │    │                 │    │  pgvector)      │
-│ • PDF Upload    │    │ • RAG Pipeline  │    │ • User Data     │
-│ • Chat UI       │    │ • AI Integration│    │ • PDF Content   │
-│ • Conversations │    │ • Tool Analysis │    │ • Vector Store  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │  External APIs  │
-                       │ • Gemma-3 (AI)  │
-                       │ • Replicate API │
-                       └─────────────────┘
+```bash
+cd frontend
+npm install                       # Install dependencies
+npm run dev                       # Start dev server
+npm run build                     # Build for production
+npm run lint                      # Lint code
 ```
 
-## 🔧 Technology Stack
+## 🗄️ Database
 
-### Frontend
-- **React 18** - UI framework
-- **Vite** - Build tool and dev server
-- **TailwindCSS** - Styling
-- **Lucide React** - Icons
+The platform uses PostgreSQL with pgvector extension for vector storage and similarity search.
 
-### Backend
-- **FastAPI** - Web framework
-- **SQLAlchemy** - ORM
-- **Pydantic** - Data validation
-- **AsyncIO** - Async operations
+### Database Setup
 
-### Database
-- **PostgreSQL** - Main database
-- **pgvector** - Vector similarity search
-- **Alembic** - Database migrations
+1. **Using Docker (Recommended)**
+   ```bash
+   docker-compose up database
+   ```
 
-### AI & Processing
-- **SentenceTransformers** - Text embeddings
-- **PyMuPDF** - PDF text extraction
-- **Replicate API** - gemma-3 model access
-- **Vector Search** - Semantic document search
+2. **Manual Setup**
+   - Install PostgreSQL with pgvector extension
+   - Create database: `reparatur`
+   - Update connection details in `backend/.env`
 
-## 📁 Project Structure
+### Environment Variables
 
-```
-ReparaturApp/
-├── 📁 frontend/          # Frontend React application
-│   ├── 📁 src/
-│   │   ├── 📁 components/      # React components
-│   │   ├── 📁 pages/          # Page components
-│   │   └── 📄 main.jsx        # App entry point
-│   ├── 📄 package.json        # Node.js dependencies
-│   └── 📄 vite.config.js      # Vite configuration
-├── 📁 backend/                # Backend FastAPI application
-│   ├── 📁 src/api/
-│   │   ├── 📁 config/         # Configuration
-│   │   ├── 📁 database/       # Database models & setup
-│   │   ├── 📁 models/         # Pydantic models
-│   │   ├── 📁 routers/        # API endpoints
-│   │   ├── 📁 service/        # Business logic
-│   │   └── 📄 main.py         # FastAPI app entry
-│   ├── 📄 pyproject.toml      # Python dependencies
-│   ├── 📄 docker-compose.yml  # Database setup
-│   └── 📄 .env                # Environment variables
-├── 📄 README.md               # This file
-├── 📄 DOCUMENTATION.md        # Detailed technical docs
-├── 📄 run.bat                 # Windows startup script
-├── 📄 run.sh                  # Linux/Unix startup script
-└── 📄 run-mac.sh              # macOS startup script
-```
-
-## 🔄 Workflow Overview
-
-### 1. User Registration & Login
-```mermaid
-graph TD
-    A[User visits app] --> B{Registered?}
-    B -->|No| C[Sign up form]
-    B -->|Yes| D[Login form]
-    C --> E[Create account]
-    D --> E
-    E --> F[Dashboard]
-```
-
-### 2. PDF Upload & Processing
-```mermaid
-graph TD
-    A[Select PDF file] --> B[Upload to backend]
-    B --> C[Extract text with PyMuPDF]
-    C --> D[Split into chunks]
-    D --> E[Generate embeddings]
-    E --> F[Store in PostgreSQL]
-    F --> G[Extract tools with regex]
-    G --> H[Save tools to database]
-    H --> I[Ready for chat]
-```
-
-### 3. Chat & RAG Pipeline
-```mermaid
-graph TD
-    A[User asks question] --> B[Generate query embedding]
-    B --> C[Vector similarity search]
-    C --> D[Retrieve relevant chunks]
-    D --> E[Build context prompt]
-    E --> F[Send to gemma-3 AI]
-    F --> G[Generate response]
-    G --> H[Save conversation]
-    H --> I[Display to user]
-```
-
-## 🗃️ Database Schema
-
-### Core Tables
-- **users** - User accounts and profiles
-- **uploaded_pdfs** - PDF files and metadata  
-- **document_chunks** - Text chunks with embeddings
-- **conversations** - Chat sessions
-- **messages** - Individual chat messages
-- **tools** - Repair tools database
-- **chat_messages** - Legacy message storage
-
-### Relationships
-```sql
-users (1) ───→ (M) uploaded_pdfs
-users (1) ───→ (M) conversations
-conversations (1) ───→ (M) messages
-uploaded_pdfs (1) ───→ (M) document_chunks
-tools (M) ←───→ (M) uploaded_pdfs (via document_tools)
-```
-
-## 🔐 Environment Variables
-
-Create `backend/.env` file:
+Create `backend/.env`:
 ```env
-# Database
+# Database Configuration
 POSTGRES_USER=test
 POSTGRES_PASSWORD=password
 POSTGRES_DB=reparatur
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-DATABASE_URL=postgresql+asyncpg://test:password@localhost:5432/reparatur
 
-# AI Services
-REPLICATE_API_TOKEN=your_replicate_token_here
+# API Tokens
+HUGGINGFACE_HUB_TOKEN=your_token_here
+GEMINI_API_KEY=your_key_here
+REPLICATE_API_TOKEN=your_token_here
 ```
 
-## 🧪 Development Setup
+## 🔧 Features
 
-### Manual Setup
+- **AI-Powered Analysis**: Leverages multiple LLM models for repair analysis
+- **Cost Estimation**: Provides detailed cost breakdowns for repairs
+- **Tool Recommendations**: Suggests appropriate tools and parts
+- **Multi-language Support**: Available in English and German
+- **Document Upload**: PDF upload and processing for repair manuals
+- **Conversation History**: Track and manage repair analysis sessions
 
-1. **Clone repository**
-   ```bash
-   git clone <repository-url>
-   cd ReparaturApp
-   ```
+## 🏛️ Architecture
 
-2. **Start database**
-   ```bash
-   cd backend
-   docker compose up -d
-   ```
+- **Frontend**: React 18 with Vite, TailwindCSS, and React Router
+- **Backend**: FastAPI with async support, SQLAlchemy ORM
+- **Database**: PostgreSQL with pgvector for semantic search
+- **AI Integration**: Hugging Face, Google Gemini, Replicate APIs
+- **Containerization**: Docker and Docker Compose
 
-3. **Backend setup**
-   ```bash
-   # With Poetry (recommended)
-   poetry install
-   poetry run uvicorn api.main:app --reload --app-dir src
-   
-   # Or with pip
-   pip install -r requirements.txt
-   python -c "import sys; sys.path.append('src'); import uvicorn; uvicorn.run('api.main:app', host='127.0.0.1', port=8000, reload=True)"
-   ```
+## 📚 API Documentation
 
-4. **Frontend setup**
-   ```bash
-   cd ../frontend
-   npm install
-   npm run dev
-   ```
-
-## 📊 API Documentation
-
-Once running, visit:
-- **Swagger UI**: http://127.0.0.1:8000/docs
-- **ReDoc**: http://127.0.0.1:8000/redoc
-
-### Key Endpoints
-- `POST /uploadedPdfs/` - Upload PDF files
-- `GET /chat/pdf` - Chat about uploaded PDFs
-- `GET /chat/general` - General repair questions
-- `GET /conversations/` - List user conversations
-- `GET /documents/{id}/tools` - Get extracted tools
-
-## 🐳 Docker Deployment
-
-Full Docker setup:
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  db:
-    image: pgvector/pgvector:pg15
-    environment:
-      POSTGRES_USER: test
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: reparatur
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://test:password@db:5432/reparatur
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-
-volumes:
-  postgres_data:
-```
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-1. **Import errors**: Make sure `__init__.py` files exist in all Python packages
-2. **Database connection**: Ensure PostgreSQL is running via Docker
-3. **API token**: Set `REPLICATE_API_TOKEN` in `.env` file
-4. **Port conflicts**: Check ports 5432 (DB), 8000 (API), 5173 (Frontend)
-5. **Dependencies**: Run install commands for both frontend and backend
-
-### Log Locations
-- **Backend logs**: Console output from uvicorn
-- **Frontend logs**: Browser developer tools
-- **Database logs**: `docker compose logs db`
-
-## 📈 Performance Tips
-
-1. **Database indexing**: Ensure proper indexes on vector columns
-2. **Connection pooling**: Configure SQLAlchemy pool settings
-3. **Chunking strategy**: Optimize text chunk size for your use case
-4. **Caching**: Implement Redis for API response caching
-5. **CDN**: Use CDN for static assets in production
+Once the backend is running, visit:
+- **Interactive API Docs**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -am 'Add new feature'`
+4. Push to branch: `git push origin feature/new-feature`
+5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 👨‍💻 Authors
+## 🔗 Links
 
-- **Your Name** - Initial work
-
-## 🙏 Acknowledgments
-
-- OpenAI for ChatGPT-style interface inspiration
-- Google DeepMind for Gemma-3 models
-- PostgreSQL team for pgvector extension
-- FastAPI and React communities
+- [Frontend README](./frontend/README.md)
+- [Backend README](./backend/README.md)
+- [Documentation](./docs/)

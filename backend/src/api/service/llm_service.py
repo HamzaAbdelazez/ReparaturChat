@@ -315,7 +315,9 @@ Answer:"""
                 "temperature": 0.7,
                 "topK": 40,
                 "topP": 0.95,
-                "maxOutputTokens": 1024
+                "maxOutputTokens": 2048,
+                "stopSequences": [],
+                "candidateCount": 1
             }
         }
         
@@ -347,6 +349,7 @@ Answer:"""
                 candidate = response_data["candidates"][0]
                 logger.info(f"Candidate structure: {json.dumps(candidate, indent=2)}")
                 
+                # Check for content with parts (normal response)
                 if "content" in candidate and "parts" in candidate["content"]:
                     parts = candidate["content"]["parts"]
                     if len(parts) > 0 and "text" in parts[0]:
@@ -356,19 +359,38 @@ Answer:"""
                             "raw_response": response_data
                         }
                 
-                # Alternative extraction paths for different response formats
+                # Check if content exists but is empty (max tokens exceeded case)
                 if "content" in candidate:
                     content = candidate["content"]
+                    
+                    # Handle case where content is a string
                     if isinstance(content, str):
                         return {
                             "answer": content.strip(),
                             "raw_response": response_data
                         }
+                    
+                    # Handle case where content has text directly
                     elif "text" in content:
                         return {
                             "answer": content["text"].strip(),
                             "raw_response": response_data
                         }
+                    
+                    # Handle case where content exists but parts are missing/empty
+                    elif "parts" not in content or not content["parts"]:
+                        # Check finish reason for more info
+                        finish_reason = candidate.get("finishReason", "")
+                        if finish_reason == "MAX_TOKENS":
+                            return {
+                                "answer": "I apologize, but my response was cut off due to length limits. Please try asking a more specific question or break it into smaller parts.",
+                                "raw_response": response_data
+                            }
+                        else:
+                            return {
+                                "answer": f"I encountered an issue generating a response. Finish reason: {finish_reason}. Please try rephrasing your question.",
+                                "raw_response": response_data
+                            }
                 
                 # Try direct text extraction from candidate
                 if "text" in candidate:
@@ -376,11 +398,24 @@ Answer:"""
                         "answer": candidate["text"].strip(),
                         "raw_response": response_data
                     }
+                
+                # Handle case where no content is available at all
+                finish_reason = candidate.get("finishReason", "UNKNOWN")
+                if finish_reason == "MAX_TOKENS":
+                    return {
+                        "answer": "I apologize, but my response was cut off due to length limits. Please try asking a more specific question.",
+                        "raw_response": response_data
+                    }
+                else:
+                    return {
+                        "answer": f"I'm unable to generate a response right now. Please try again or rephrase your question. (Reason: {finish_reason})",
+                        "raw_response": response_data
+                    }
             
-            # If we can't extract text, return the whole response for debugging
+            # If we can't extract text, return a helpful error message
             logger.warning(f"Could not extract text from Gemini response. Full structure: {json.dumps(response_data, indent=2)}")
             return {
-                "answer": f"WARNING: Received response but could not extract text. Structure: {json.dumps(response_data, indent=2)[:500]}...",
+                "answer": "I'm sorry, I encountered an issue processing your request. Please try again with a different question or try using a different AI model.",
                 "raw_response": response_data
             }
             
@@ -403,55 +438,126 @@ Answer:"""
         if len(context) > MAX_CONTEXT_CHARS:
             context = context[:MAX_CONTEXT_CHARS]
         
-        # Build prompt for DeepSeek with markdown formatting instructions
+        # Build prompt for DeepSeek with comprehensive formatting instructions
         if context.strip():
-            prompt = f"""You are a helpful repair assistant with advanced reasoning capabilities. Based on the following context, please answer the user's question using markdown formatting for better readability.
+            prompt = f"""You are an expert repair assistant with advanced reasoning capabilities. Based on the repair manual context provided, give a comprehensive and well-structured answer to the user's question.
 
-Context: {context}
+**Repair Manual Context:**
+{context}
 
-Question: {question}
+**User Question:** {question}
 
-Please provide a well-reasoned markdown answer that includes:
-- **Bold** for important points
-- Numbered lists for step-by-step instructions
-- Bullet lists for tools/parts needed
-- > Blockquotes for safety warnings
-- Clear reasoning about the repair process
+**Instructions for your response:**
+1. Provide a complete, detailed answer using markdown formatting
+2. Structure your response with clear sections using headers (##, ###)
+3. Use proper markdown formatting throughout:
+   - **Bold** for important tools, parts, and warnings
+   - Numbered lists (1., 2., 3.) for step-by-step procedures
+   - Bullet lists (-) for tool lists and safety considerations
+   - > Blockquotes for critical safety warnings
+   - `Code blocks` for specific part numbers or measurements
 
-Answer:"""
+**Required response structure:**
+## Direct Answer
+[Directly answer the user's question]
+
+## Tools Required
+[List all necessary tools with estimated costs]
+
+## Step-by-Step Process
+[If applicable, provide numbered steps]
+
+## Safety Considerations
+[Important safety warnings and precautions]
+
+## Cost Analysis
+[Breakdown of DIY vs professional costs]
+
+## Additional Tips
+[Helpful advice for beginners or troubleshooting]
+
+Please ensure your response is complete and doesn't get cut off. Prioritize the most important information first."""
         else:
-            prompt = f"""You are a helpful repair assistant with advanced reasoning capabilities. Please answer the following question using markdown formatting for better readability.
+            prompt = f"""You are an expert repair assistant with advanced reasoning capabilities. Provide a comprehensive answer to the repair question below.
 
-Question: {question}
+**User Question:** {question}
 
-Please provide a well-reasoned markdown answer that includes:
-- **Bold** for important points
-- Numbered lists for step-by-step instructions
-- Bullet lists for tools/parts needed
-- > Blockquotes for safety warnings
-- Clear reasoning about the repair process
+**Instructions for your response:**
+1. Provide a complete, detailed answer using markdown formatting
+2. Structure your response with clear sections using headers (##, ###)
+3. Use proper markdown formatting throughout:
+   - **Bold** for important tools, parts, and warnings
+   - Numbered lists (1., 2., 3.) for step-by-step procedures
+   - Bullet lists (-) for tool lists and safety considerations
+   - > Blockquotes for critical safety warnings
+   - `Code blocks` for specific part numbers or measurements
 
-Answer:"""
+**Required response structure:**
+## Direct Answer
+[Directly answer the user's question]
+
+## Tools Required
+[List all necessary tools with estimated costs]
+
+## Step-by-Step Process
+[If applicable, provide numbered steps]
+
+## Safety Considerations
+[Important safety warnings and precautions]
+
+## Cost Analysis
+[Breakdown of DIY vs professional costs if applicable]
+
+## Additional Tips
+[Helpful advice for beginners or troubleshooting]
+
+Please ensure your response is complete and doesn't get cut off. Prioritize the most important information first."""
         
         try:
-            # DeepSeek specific configuration
-            input_params = {
-                "prompt": prompt,
-                "temperature": 0.1,  # Lower temperature for more focused reasoning
-                "max_tokens": 2048
-            }
-            
-            output = self.replicate_client.run(self.deepseek_model, input=input_params)
-            answer_text = self._normalize_replicate_output(output)
-            
-            if answer_text:
-                return {"answer": answer_text.strip(), "raw_response": answer_text}
+            # Try the main DeepSeek model first
+            try:
+                input_params = {
+                    "prompt": prompt,
+                    "temperature": 0.3,
+                    "max_tokens": 4096,
+                    "top_p": 0.8,
+                    "repetition_penalty": 1.1
+                }
+                
+                output = self.replicate_client.run(self.deepseek_model, input=input_params)
+                answer_text = self._normalize_replicate_output(output)
+                
+                if answer_text:
+                    return {"answer": answer_text.strip(), "raw_response": answer_text}
+                    
+            except Exception as model_error:
+                logger.warning(f"Primary DeepSeek model failed: {model_error}")
+                
+                # Fallback to alternative DeepSeek model
+                try:
+                    fallback_model = "deepseek-ai/deepseek-r1-distill-qwen-1.5b"
+                    logger.info(f"Trying fallback DeepSeek model: {fallback_model}")
+                    
+                    output = self.replicate_client.run(fallback_model, input=input_params)
+                    answer_text = self._normalize_replicate_output(output)
+                    
+                    if answer_text:
+                        return {"answer": answer_text.strip(), "raw_response": answer_text}
+                        
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback DeepSeek model also failed: {fallback_error}")
+                    # Re-raise the original error
+                    raise model_error
             
             return {"answer": "WARNING: Sorry, I could not get an answer from DeepSeek.", "raw_response": ""}
             
         except Exception as e:
             logger.error(f"DeepSeek API failed: {str(e)}")
-            raise
+            # Provide helpful error message instead of crashing
+            return {
+                "answer": f"Sorry, DeepSeek is currently unavailable. Error: {str(e)}. Please try using Gemini or Gemma3 instead.",
+                "raw_response": str(e)
+            }
     
     def _ask_gpt5(self, question: str, context: str = "") -> Dict[str, Any]:
         """Ask GPT-5 via Replicate API using correct format."""
@@ -462,57 +568,96 @@ Answer:"""
         if len(context) > MAX_CONTEXT_CHARS:
             context = context[:MAX_CONTEXT_CHARS]
         
-        # Build prompt for GPT-5 with markdown formatting instructions
+        # Build prompt for GPT-5 with comprehensive formatting instructions including proper cost labeling
         if context.strip():
-            prompt_text = f"""You are a helpful repair assistant. Based on the following context, please answer the user's question using markdown formatting for better readability.
+            prompt_text = f"""You are an expert repair assistant. Based on the repair manual context provided, give a comprehensive and well-structured answer to the user's question with proper cost analysis.
 
-Context: {context}
+**Repair Manual Context:**
+{context}
 
-Question: {question}
+**User Question:** {question}
 
-Please provide a well-formatted markdown answer that includes:
-- **Bold** for important points
-- Numbered lists for step-by-step instructions
-- Bullet lists for tools/parts needed
-- > Blockquotes for safety warnings
-- Clear reasoning about the repair process
+**Critical Instructions for your response:**
+1. Always provide complete answers with proper labels and formatting
+2. When discussing costs, ALWAYS include clear labels like "DIY Cost:", "Professional Cost:", "Tool Cost:", etc.
+3. Use markdown formatting throughout for better readability
+4. Structure your response with clear sections using headers (##, ###)
 
-IMPORTANT: At the end of your response, please include a structured section for tools and parts:
+**Required response structure:**
+## Direct Answer
+[Directly answer the user's question]
 
-### Tools & Parts Required
-**Tools:**
-- List all tools needed (e.g., screwdriver, multimeter, etc.)
+## Cost Breakdown
+### DIY Repair Costs:
+- **Tools needed:** [List with individual prices, e.g., "Phillips screwdriver: $5-15"]
+- **Parts cost:** [Estimated part prices with labels]
+- **Total DIY cost:** [Clear total with "Total DIY Cost: $X-Y"]
 
-**Parts:**
-- List all parts that might need replacement (e.g., battery, screen, etc.)
+### Professional Repair Costs:
+- **Labor cost:** [Typical labor charges]
+- **Parts markup:** [How professionals mark up parts]
+- **Total professional cost:** [Clear total with "Total Professional Cost: $X-Y"]
 
-**Estimated Cost:**
-- Provide rough cost estimates if possible
+### Cost Comparison:
+- **Savings:** [Clear savings calculation with "You could save: $X-Y by doing it yourself"]
+
+## Tools Required
+[List all necessary tools with individual estimated costs]
+
+## Step-by-Step Process
+[If applicable, provide numbered steps]
+
+## Safety Considerations
+[Important safety warnings and precautions]
+
+## Additional Tips
+[Helpful advice for beginners]
+
+**IMPORTANT:** Always label your prices clearly (e.g., "DIY Cost: $50-80", "Professional Cost: $150-250", "You save: $100-170"). Never provide bare numbers without context.
 
 Answer:"""
         else:
-            prompt_text = f"""You are a helpful repair assistant. Please answer the following question using markdown formatting for better readability.
+            prompt_text = f"""You are an expert repair assistant. Provide a comprehensive answer to the repair question with proper cost analysis and clear labeling.
 
-Question: {question}
+**User Question:** {question}
 
-Please provide a well-formatted markdown answer that includes:
-- **Bold** for important points
-- Numbered lists for step-by-step instructions
-- Bullet lists for tools/parts needed
-- > Blockquotes for safety warnings
-- Clear reasoning about the repair process
+**Critical Instructions for your response:**
+1. Always provide complete answers with proper labels and formatting
+2. When discussing costs, ALWAYS include clear labels like "DIY Cost:", "Professional Cost:", "Tool Cost:", etc.
+3. Use markdown formatting throughout for better readability
+4. Structure your response with clear sections using headers (##, ###)
 
-IMPORTANT: At the end of your response, please include a structured section for tools and parts:
+**Required response structure:**
+## Direct Answer
+[Directly answer the user's question]
 
-### Tools & Parts Required
-**Tools:**
-- List all tools needed (e.g., screwdriver, multimeter, etc.)
+## Cost Breakdown
+### DIY Repair Costs:
+- **Tools needed:** [List with individual prices, e.g., "Phillips screwdriver: $5-15"]
+- **Parts cost:** [Estimated part prices with labels]
+- **Total DIY cost:** [Clear total with "Total DIY Cost: $X-Y"]
 
-**Parts:**
-- List all parts that might need replacement (e.g., battery, screen, etc.)
+### Professional Repair Costs:
+- **Labor cost:** [Typical labor charges]
+- **Parts markup:** [How professionals mark up parts]
+- **Total professional cost:** [Clear total with "Total Professional Cost: $X-Y"]
 
-**Estimated Cost:**
-- Provide rough cost estimates if possible
+### Cost Comparison:
+- **Savings:** [Clear savings calculation with "You could save: $X-Y by doing it yourself"]
+
+## Tools Required
+[List all necessary tools with individual estimated costs]
+
+## Step-by-Step Process
+[If applicable, provide numbered steps]
+
+## Safety Considerations
+[Important safety warnings and precautions]
+
+## Additional Tips
+[Helpful advice for beginners]
+
+**IMPORTANT:** Always label your prices clearly (e.g., "DIY Cost: $50-80", "Professional Cost: $150-250", "You save: $100-170"). Never provide bare numbers without context.
 
 Answer:"""
         
@@ -547,7 +692,11 @@ Answer:"""
         if isinstance(output, (list, tuple)):
             # Filter out empty strings and join
             filtered_output = [str(x) for x in output if str(x).strip()]
-            return "".join(filtered_output).strip()
+            result = "".join(filtered_output).strip()
+            # Ensure we don't have incomplete responses
+            if result and not result.endswith(('.', '!', '?', '```', '**', '*')):
+                logger.warning(f"Response may be incomplete: ends with '{result[-10:]}'")
+            return result
         if isinstance(output, dict):
             return output.get("text", str(output))
         return str(output)

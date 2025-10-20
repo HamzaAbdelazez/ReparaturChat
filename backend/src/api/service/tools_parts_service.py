@@ -73,26 +73,77 @@ class ToolsPartsExtractor:
         }
     
     def _extract_cost_estimates(self, text: str) -> List[Dict[str, Any]]:
-        """Extract cost estimates from text."""
+        """Extract cost estimates from text with associated items."""
         
-        cost_patterns = [
-            r'\$(\d+(?:\.\d{2})?)',  # $15.99
-            r'€(\d+(?:\.\d{2})?)',   # €15.99
-            r'(\d+(?:\.\d{2})?) ?(?:dollars?|euros?|USD|EUR)',  # 15 dollars
+        # Enhanced patterns to capture item names with their costs
+        item_cost_patterns = [
+            r'([^:\n\.]+?)[\s:]+\$(\d+(?:\.\d{2})?(?:\s*[-–]\s*\$?\d+(?:\.\d{2})?)?)',  # Item: $15-20 or Item $15
+            r'([^:\n\.]+?)[\s:]+€(\d+(?:\.\d{2})?(?:\s*[-–]\s*€?\d+(?:\.\d{2})?)?)',   # Item: €15-20 or Item €15
+            r'([^:\n\.]+?)[\s:]+(\d+(?:\.\d{2})?(?:\s*[-–]\s*\d+(?:\.\d{2})?)?) ?(?:dollars?|USD)',  # Item: 15 dollars
         ]
         
         estimates = []
-        for pattern in cost_patterns:
+        
+        # Try to match items with their costs
+        for pattern in item_cost_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             for match in matches:
                 try:
-                    amount = float(match) if isinstance(match, str) else float(match[0])
+                    item_name = match[0].strip().strip('*-•').strip()
+                    cost_str = match[1].strip()
+                    
+                    # Skip if item name is too short or generic
+                    if len(item_name) < 3 or item_name.lower() in ['total', 'cost', 'price', 'estimate']:
+                        continue
+                    
+                    # Parse cost range (e.g., "15-20" or "15")
+                    if '-' in cost_str or '–' in cost_str:
+                        # Handle ranges like "$15-20" or "15-20"
+                        cost_parts = re.split(r'[-–]', cost_str)
+                        if len(cost_parts) == 2:
+                            min_cost = float(re.findall(r'\d+(?:\.\d{2})?', cost_parts[0])[0])
+                            max_cost = float(re.findall(r'\d+(?:\.\d{2})?', cost_parts[1])[0])
+                            cost_display = f"${min_cost:.0f}-${max_cost:.0f}"
+                        else:
+                            amount = float(re.findall(r'\d+(?:\.\d{2})?', cost_str)[0])
+                            cost_display = f"${amount:.0f}"
+                    else:
+                        amount = float(re.findall(r'\d+(?:\.\d{2})?', cost_str)[0])
+                        cost_display = f"${amount:.0f}"
+                    
                     estimates.append({
-                        "amount": amount,
-                        "currency": "USD" if "$" in text or "dollar" in text.lower() else "EUR"
+                        "item": item_name,
+                        "cost_display": cost_display,
+                        "currency": "USD"
                     })
-                except ValueError:
+                except (ValueError, IndexError):
                     continue
+        
+        # If no item-cost pairs found, fallback to simple cost extraction
+        if not estimates:
+            simple_patterns = [
+                r'\$(\d+(?:\.\d{2})?(?:\s*[-–]\s*\$?\d+(?:\.\d{2})?)?)',  # $15-20 or $15
+                r'€(\d+(?:\.\d{2})?(?:\s*[-–]\s*€?\d+(?:\.\d{2})?)?)',   # €15-20 or €15
+            ]
+            
+            for pattern in simple_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                for match in matches:
+                    try:
+                        cost_str = match.strip()
+                        if '-' in cost_str or '–' in cost_str:
+                            cost_display = cost_str
+                        else:
+                            amount = float(cost_str)
+                            cost_display = f"${amount:.0f}"
+                        
+                        estimates.append({
+                            "item": "General cost",
+                            "cost_display": cost_display,
+                            "currency": "USD"
+                        })
+                    except ValueError:
+                        continue
         
         return estimates
 
@@ -144,25 +195,64 @@ class ToolsPartsResponse:
         return response
     
     def _format_tools_parts_section(self) -> str:
-        """Format tools and parts as markdown section."""
+        """Format tools and parts as markdown section with associated costs."""
         
         sections = []
+        cost_estimates = self.tools_parts_data.get("cost_estimates", [])
         
+        # Helper function to find cost for an item
+        def find_cost_for_item(item_name: str) -> str:
+            item_lower = item_name.lower()
+            for estimate in cost_estimates:
+                estimate_item = estimate.get("item", "").lower()
+                # Check if the item name is mentioned in the cost estimate
+                if any(word in estimate_item for word in item_lower.split()) or \
+                   any(word in item_lower for word in estimate_item.split()):
+                    return f" - **{estimate['cost_display']}**"
+            return ""
+        
+        # Format tools with their costs
         if self.tools_parts_data["tools"]:
-            tools_list = "\n".join([f"- {tool}" for tool in self.tools_parts_data["tools"]])
-            sections.append(f"**🔧 Tools Needed:**\n{tools_list}")
+            tools_list = []
+            for tool in self.tools_parts_data["tools"]:
+                cost_info = find_cost_for_item(tool)
+                tools_list.append(f"- {tool}{cost_info}")
+            sections.append(f"**🔧 Tools Needed:**\n" + "\n".join(tools_list))
         
+        # Format parts with their costs
         if self.tools_parts_data["parts"]:
-            parts_list = "\n".join([f"- {part}" for part in self.tools_parts_data["parts"]])
-            sections.append(f"**🔩 Parts Required:**\n{parts_list}")
+            parts_list = []
+            for part in self.tools_parts_data["parts"]:
+                cost_info = find_cost_for_item(part)
+                parts_list.append(f"- {part}{cost_info}")
+            sections.append(f"**🔩 Parts Required:**\n" + "\n".join(parts_list))
         
-        if self.tools_parts_data["cost_estimates"]:
-            cost_info = []
-            for estimate in self.tools_parts_data["cost_estimates"]:
-                cost_info.append(f"- {estimate['currency']} {estimate['amount']:.2f}")
-            if cost_info:
-                cost_list = "\n".join(cost_info)
-                sections.append(f"**💰 Estimated Costs:**\n{cost_list}")
+        # Add any remaining cost estimates that weren't matched to tools/parts
+        if cost_estimates:
+            matched_items = set()
+            # Track which cost estimates were already associated with tools/parts
+            for tool in self.tools_parts_data.get("tools", []):
+                for estimate in cost_estimates:
+                    estimate_item = estimate.get("item", "").lower()
+                    if any(word in estimate_item for word in tool.lower().split()) or \
+                       any(word in tool.lower() for word in estimate_item.split()):
+                        matched_items.add(estimate.get("item", ""))
+            
+            for part in self.tools_parts_data.get("parts", []):
+                for estimate in cost_estimates:
+                    estimate_item = estimate.get("item", "").lower()
+                    if any(word in estimate_item for word in part.lower().split()) or \
+                       any(word in part.lower() for word in estimate_item.split()):
+                        matched_items.add(estimate.get("item", ""))
+            
+            # Add unmatched cost estimates
+            unmatched_costs = []
+            for estimate in cost_estimates:
+                if estimate.get("item", "") not in matched_items:
+                    unmatched_costs.append(f"- {estimate['item']}: **{estimate['cost_display']}**")
+            
+            if unmatched_costs:
+                sections.append(f"**💰 Additional Costs:**\n" + "\n".join(unmatched_costs))
         
         if sections:
             return "---\n\n### 🛠️ Required Tools & Parts\n\n" + "\n\n".join(sections)

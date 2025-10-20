@@ -1,0 +1,60 @@
+services:
+  # PostgreSQL Database
+  database:
+    image: pgvector/pgvector:pg15
+    container_name: reparatur_database
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: reparatur
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/api/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - reparatur_network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reparatur_backend
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: reparatur
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+    volumes:
+      - ./backend:/app
+    networks:
+      - reparatur_network
+
+  # Frontend (for production)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: reparatur_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - reparatur_network
+
+volumes:
+  postgres_data:
+
+networks:
+  reparatur_network:
+    driver: bridge
