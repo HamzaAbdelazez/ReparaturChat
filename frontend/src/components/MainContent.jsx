@@ -5,6 +5,7 @@ import ToolAnalysis from "./ToolAnalysis";
 import DeviceSelector from "./DeviceSelector";
 import RepairAnalysis from "./RepairAnalysis";
 import ChatInterface from "./ChatInterface";
+import LLMModelSelector from "./LLMModelSelector";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 function MainContent({
@@ -24,6 +25,8 @@ function MainContent({
   onSend,
   isLoading,
   rating,
+  selectedModel,
+  onModelChange,
 
   // Device related
   userDevices,
@@ -135,6 +138,15 @@ function MainContent({
             onManageDevices={onManageDevices}
           />
 
+          {/* LLM Model Selector */}
+          <div className="mb-4">
+            <LLMModelSelector
+              selectedModel={selectedModel}
+              onModelChange={onModelChange}
+              disabled={isLoading}
+            />
+          </div>
+
           {/* Chat Interface */}
           <ChatInterface
             question={question}
@@ -154,6 +166,7 @@ function MainContent({
             repairAnalysis={repairAnalysis}
             onPerformAnalysis={onPerformAnalysis}
             chatHistory={history}
+            selectedModel={selectedModel}
           />
         </div>
       </div>

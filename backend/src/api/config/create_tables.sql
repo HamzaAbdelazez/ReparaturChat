@@ -2,6 +2,19 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS vector;
 
+
+-- This provides device context for chat conversations
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name='conversations' AND column_name='device_id'
+    ) THEN
+        ALTER TABLE conversations ADD COLUMN device_id UUID REFERENCES devices(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

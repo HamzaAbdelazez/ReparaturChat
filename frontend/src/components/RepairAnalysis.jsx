@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 function RepairAnalysis({ 
   uploadedPdf, 
@@ -7,7 +8,8 @@ function RepairAnalysis({
   showAnalysis, 
   repairAnalysis, 
   onPerformAnalysis,
-  chatHistory 
+  chatHistory,
+  selectedModel = "gemma3"
 }) {
   const { t } = useTranslation();
 
@@ -62,7 +64,8 @@ function RepairAnalysis({
             user_id: userId,
             problem_description: problemDescription || "Device troubleshooting and repair analysis",
             chat_history: chatHistory.slice(-10), // Send last 10 messages for context
-            document_id: uploadedPdf?.id || null // Include PDF ID if available for device extraction
+            document_id: uploadedPdf?.id || null, // Include PDF ID if available for device extraction
+            llm_model: selectedModel
           })
         }
       );
@@ -348,18 +351,22 @@ function RepairAnalysis({
           {repairAnalysis.problem_summary && (
             <div className="border-l-4 border-indigo-500 pl-4">
               <h4 className="font-medium">{t('analysis.problemSummary')}</h4>
-              <p className="text-sm text-gray-700">{repairAnalysis.problem_summary}</p>
+              <div className="text-sm text-gray-700">
+                <MarkdownRenderer content={repairAnalysis.problem_summary} />
+              </div>
             </div>
           )}
 
           {repairAnalysis.suggested_solutions && repairAnalysis.suggested_solutions.length > 0 && (
             <div className="border-l-4 border-teal-500 pl-4">
               <h4 className="font-medium">{t('analysis.suggestedSolutions')}</h4>
-              <ul className="text-sm text-gray-700 list-disc list-inside">
+              <div className="text-sm text-gray-700 space-y-2">
                 {repairAnalysis.suggested_solutions.map((solution, idx) => (
-                  <li key={idx}>{solution}</li>
+                  <div key={idx} className="border-b border-gray-100 pb-2 last:border-b-0">
+                    <MarkdownRenderer content={solution} />
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>

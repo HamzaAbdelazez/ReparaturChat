@@ -58,7 +58,9 @@ function ReparaturApp() {
     setHistory,
     isLoading,
     handleSend,
-    clearChatState
+    clearChatState,
+    selectedModel,
+    setSelectedModel
   } = useChat(userId, rating, uploadedPdf);
 
   const {
@@ -233,6 +235,8 @@ function ReparaturApp() {
           onSend={handleEnhancedSend}
           isLoading={isLoading}
           rating={rating}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
 
           // Device related
           userDevices={userDevices}

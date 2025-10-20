@@ -281,7 +281,7 @@ class ToolPrice(Base):
 
 # ================= CONVERSATIONS =================
 class Conversation(Base):
-    """Conversations for organizing chat sessions."""
+    """Conversations for organizing chat sessions with device context."""
     __tablename__ = "conversations"
     
     id: Mapped[uuid.UUID] = mapped_column(
@@ -289,6 +289,10 @@ class Conversation(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    # Add device context to conversations
+    device_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("devices.id", ondelete="SET NULL"), nullable=True
     )
     title: Mapped[str] = mapped_column(String(length=255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -299,6 +303,7 @@ class Conversation(Base):
     
     # Relationships
     user: Mapped["User"] = relationship("User")
+    device: Mapped["Device"] = relationship("Device")  # Device context for conversation
     messages: Mapped[List["Message"]] = relationship(
         "Message", back_populates="conversation", cascade="all, delete-orphan"
     )

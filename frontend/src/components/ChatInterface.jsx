@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 function ChatInterface({ 
   history, 
@@ -33,7 +34,7 @@ function ChatInterface({
     <>
 
       {/* Chat Box  */}
-      <div className="bg-white p-6 rounded-xl shadow-md max-h-[500px] overflow-y-auto mb-6">
+      <div className="bg-white p-6 rounded-xl shadow-md max-h-[800px] overflow-y-auto mb-6">
         <h3 className="text-xl font-semibold mb-4">{t('chat.title')}</h3>
         {history.length === 0 ? (
           <p className="text-gray-500 italic text-lg">{t('chat.noMessages')}</p>
@@ -53,7 +54,14 @@ function ChatInterface({
                 }`}>
                   {msg.type === "user" ? "You" : "Assistant"}
                 </div>
-                <div className="whitespace-pre-wrap text-gray-800">{msg.content}</div>
+                {msg.type === "user" ? (
+                  <div className="whitespace-pre-wrap text-gray-800">{msg.content}</div>
+                ) : (
+                  <MarkdownRenderer 
+                    content={msg.content} 
+                    className="text-gray-800"
+                  />
+                )}
               </li>
             ))}
             {isLoading && (
@@ -75,7 +83,7 @@ function ChatInterface({
       {/* Chat Input */}
       <form
         onSubmit={onSend}
-        className="bg-white h-40 rounded-2xl shadow-md border border-neutral-200 relative"
+        className="bg-white h-30rounded-2xl shadow-md border border-neutral-200 relative"
       >
         <div className="flex">
           <textarea

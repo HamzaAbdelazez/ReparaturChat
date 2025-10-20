@@ -6,7 +6,7 @@ from sqlalchemy import select
 from uuid import UUID
 from pydantic import BaseModel
 from api.routers.dependencies import db_dependency
-from api.database.table_models import Conversation, Message, UploadedPdf
+from api.database.table_models import Conversation, Message, UploadedPdf, Device
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -251,4 +251,124 @@ async def upload_pdf_to_conversation(
     except Exception as e:
         logger.error(f"Error uploading PDF: {e}")
         await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.post("/{conversation_id}/set-device")
+async def set_conversation_device(
+    conversation_id: UUID,
+    device_id: UUID = Query(..., description="Device ID to associate with conversation"),
+    user_id: UUID = Query(..., description="User ID for authorization"),
+    db: AsyncSession = Depends(db_dependency)
+):
+    """
+    Set device context for a conversation.
+    This allows the LLM to have device information for better repair assistance.
+    """
+    try:
+        # Verify conversation exists and belongs to user
+        conversation_query = select(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id
+        )
+        conversation_result = await db.execute(conversation_query)
+        conversation = conversation_result.scalar_one_or_none()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found or not authorized")
+        
+        # Verify device exists
+        device_query = select(Device).filter(Device.id == device_id)
+        device_result = await db.execute(device_query)
+        device = device_result.scalar_one_or_none()
+        
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+        
+        # Update conversation with device context
+        conversation.device_id = device_id
+        await db.commit()
+        
+        logger.info(f"Device context set for conversation {conversation_id}: {device.manufacturer} {device.model}")
+        
+        return {
+            "message": "Device context set successfully",
+            "conversation_id": str(conversation_id),
+            "device": {
+                "id": str(device.id),
+                "manufacturer": device.manufacturer,
+                "model": device.model,
+                "category": device.category
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting device context: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get("/{conversation_id}/device")
+async def get_conversation_device(
+    conversation_id: UUID,
+    user_id: UUID = Query(..., description="User ID for authorization"),
+    db: AsyncSession = Depends(db_dependency)
+):
+    """
+    Get device context for a conversation.
+    """
+    try:
+        # Get conversation with device info
+        conversation_query = select(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id
+        )
+        conversation_result = await db.execute(conversation_query)
+        conversation = conversation_result.scalar_one_or_none()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found or not authorized")
+        
+        if not conversation.device_id:
+            return {
+                "message": "No device context set for this conversation",
+                "conversation_id": str(conversation_id),
+                "device": None
+            }
+        
+        # Get device information
+        device_query = select(Device).filter(Device.id == conversation.device_id)
+        device_result = await db.execute(device_query)
+        device = device_result.scalar_one_or_none()
+        
+        if not device:
+            # Device was deleted, clear the reference
+            conversation.device_id = None
+            await db.commit()
+            
+            return {
+                "message": "Device context was cleared (device no longer exists)",
+                "conversation_id": str(conversation_id),
+                "device": None
+            }
+        
+        return {
+            "message": "Device context retrieved",
+            "conversation_id": str(conversation_id),
+            "device": {
+                "id": str(device.id),
+                "manufacturer": device.manufacturer,
+                "model": device.model,
+                "category": device.category,
+                "warranty_period_months": device.warranty_period_months,
+                "repair_complexity": device.repair_complexity
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting device context: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

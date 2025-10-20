@@ -182,7 +182,7 @@ def ask_gemma3(question: str, context: str = "", stream: bool = False) -> dict:
         logger.error(f"❌ Gemma API failed: {str(e)}")
         return {"answer": "⚠️ Error contacting Gemma API.", "raw_response": str(e)}
 
-async def ask_gemma3_async(question: str, context: str = "", timeout: int = 30) -> dict:
+async def ask_gemma3_async(question: str, context: str = "", timeout: int = 180) -> dict:
     """Async wrapper with timeout + error handling."""
     try:
         return await asyncio.wait_for(
@@ -203,7 +203,8 @@ async def process_question(
     question: str,
     db: AsyncSession,
     document_id: uuid.UUID,
-    user_id: uuid.UUID
+    user_id: uuid.UUID,
+    llm_provider: str = "gemma3"
 ):
     """RAG pipeline: search chunks → send to Gemma → save chat → return answer."""
 
@@ -213,13 +214,25 @@ async def process_question(
     chunks = await search_similar_chunks(question, db, document_id=document_id, user_id=user_id)
     context = "\n".join(chunks) if chunks else "No relevant content found in the document."
 
-    logger.info(f"📨 Context sent to Gemma (first 200 chars): {context[:200]}...")
+    logger.info(f"📨 Context sent to {llm_provider.upper()} (first 200 chars): {context[:200]}...")
 
-    # Call Gemma with timeout
+    # Call selected LLM with timeout
     try:
-        response = await ask_gemma3_async(question, context, timeout=60)
+        from api.service.llm_service import llm_service, LLMProvider
+        llm_provider_lower = llm_provider.lower()
+        if llm_provider_lower == "gemma3":
+            provider = LLMProvider.GEMMA3
+        elif llm_provider_lower == "gemini":
+            provider = LLMProvider.GEMINI
+        elif llm_provider_lower == "deepseek":
+            provider = LLMProvider.DEEPSEEK
+        elif llm_provider_lower == "gpt5":
+            provider = LLMProvider.GPT5
+        else:
+            provider = LLMProvider.GEMMA3  # Default fallback
+        response = await llm_service.ask_question_async(question, context, provider, timeout=180)
     except asyncio.TimeoutError:
-        logger.error("⚠️ Gemma request timed out")
+        logger.error(f"⚠️ {llm_provider.upper()} request timed out")
         return {
             "question": question,
             "answer": "⚠️ Request timed out. Please try again.",
@@ -260,93 +273,4 @@ async def process_question(
 # SYNC VERSIONS FOR COMPATIBILITY
 # ===================================================
 
-def search_similar_chunks_sync(
-    query: str,
-    db,  # Sync Session
-    document_id: uuid.UUID,
-    user_id: uuid.UUID,
-    top_k=5
-) -> List[str]:
-    """Sync version: Find most relevant chunks for a query inside a specific document for this user."""
-    query_embedding = embedding_model.encode([query])[0].tolist()
-    embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
-    sql = text("""
-        SELECT content
-        FROM document_chunks
-        WHERE document_id = :document_id
-          AND user_id = :user_id
-        ORDER BY embedding <-> (:query_embedding)::vector
-        LIMIT :top_k
-    """)
-
-    result = db.execute(
-        sql, {
-            "document_id": str(document_id),
-            "user_id": str(user_id),
-            "query_embedding": embedding_str,
-            "top_k": top_k
-        }
-    )
-    rows = [row[0] for row in result]
-    logger.info(f"🔍 Retrieved {len(rows)} relevant chunks for user {user_id}")
-    return rows
-
-def process_question(
-    question: str,
-    db,  # Sync Session
-    document_id: uuid.UUID,
-    user_id: uuid.UUID
-):
-    """Sync version: RAG pipeline: search chunks → send to Gemma → save chat → return answer."""
-
-    start_time = time.time()
-
-    # Search chunks only for this document
-    chunks = search_similar_chunks_sync(question, db, document_id=document_id, user_id=user_id)
-    context = "\n".join(chunks) if chunks else "No relevant content found in the document."
-
-    logger.info(f"📨 Context sent to Gemma (first 200 chars): {context[:200]}...")
-
-    # Call Gemma (sync version) with shorter context for speed
-    try:
-        response = ask_gemma3(question, context)
-    except Exception as e:
-        logger.error(f"⚠️ Gemma request failed: {e}")
-        return {
-            "question": question,
-            "answer": "⚠️ Request failed. Please try again.",
-            "raw_response": None,
-            "elapsed_time": 0,
-        }
-
-    # Clean up the answer
-    answer = response.get("answer", "⚠️ No answer")
-    answer = answer.replace("<end_of_turn>", "").strip()
-    raw_response = response.get("raw_response")
-
-    # Save chat history
-    user_msg = ChatMessage(
-        user_id=user_id, document_id=document_id, role="user", message=question
-    )
-    assistant_msg = ChatMessage(
-        user_id=user_id, document_id=document_id, role="assistant", message=answer
-    )
-
-    try:
-        db.add(user_msg)
-        db.add(assistant_msg)
-        db.commit()
-        logger.info("💾 Chat messages saved to database")
-    except Exception as e:
-        logger.exception(f"❌ Failed to save chat messages: {e}")
-
-    elapsed = time.time() - start_time
-    logger.info(f"⏱️ Total time to get answer: {elapsed:.2f} seconds")
-
-    return {
-        "question": question,
-        "answer": answer,
-        "raw_response": raw_response,
-        "elapsed_time": elapsed,
-    }
