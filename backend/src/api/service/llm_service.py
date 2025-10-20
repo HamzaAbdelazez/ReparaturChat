@@ -46,7 +46,7 @@ class LLMService:
             logger.warning("REPLICATE_API_TOKEN not found - Gemma3, DeepSeek, and GPT-5 will not be available")
         
         # Google Gemini using direct HTTP API
-        self.gemini_api_key = 'AIzaSyDp3I7JLUew6gqULsdZyNexMkb230G1Q8k'
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         self.gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_api_key}"
         
         if self.gemini_api_key and len(self.gemini_api_key.strip()) > 0:
