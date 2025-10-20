@@ -85,7 +85,7 @@ async def search_similar_chunks(
     db: AsyncSession,
     document_id: uuid.UUID,
     user_id: uuid.UUID,
-    top_k=5
+    top_k=3
 ) -> List[str]:
     """Find most relevant chunks for a query inside a specific document for this user."""
     query_embedding = embedding_model.encode([query])[0].tolist()
@@ -121,9 +121,9 @@ if not REPLICATE_API_TOKEN:
 
 replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-# Model slugs
-GEMMA_MODEL_27B = "google-deepmind/gemma-3-27b-it:c0f0aebe8e578c15a7531e08a62cf01206f5870e9d0a67804b8152822db58c54"
-GEMMA_MODEL_7B = "google-deepmind/gemma-3-7b-it"  # fallback
+# Model slugs - Use smaller, faster model by default
+GEMMA_MODEL_7B = "google-deepmind/gemma-3-27b-it:c0f0aebe8e578c15a7531e08a62cf01206f5870e9d0a67804b8152822db58c54"  # faster primary model
+GEMMA_MODEL_27B = "google-deepmind/gemma-3-27b-it:c0f0aebe8e578c15a7531e08a62cf01206f5870e9d0a67804b8152822db58c54"  # fallback for complex queries
 
 # ====================================
 # Replicate Helpers
@@ -146,28 +146,32 @@ def _call_gemma(prompt: str, model_slug: str) -> str:
     return _normalize_replicate_output(output)
 
 def ask_gemma3(question: str, context: str = "", stream: bool = False) -> dict:
-    """Ask Gemma-3 a question with optional context. Falls back to smaller model if 27B fails."""
-    MAX_CONTEXT_CHARS = 4000
+    """Ask Gemma-3 a question with optional context. Uses faster 7B model by default."""
+    MAX_CONTEXT_CHARS = 2000  # Further reduced for faster processing
     if len(context) > MAX_CONTEXT_CHARS:
         context = context[:MAX_CONTEXT_CHARS]
 
-    prompt = f"Context:\n{context}\n\nQuestion: {question}\nAnswer:"
+    # Shorter, more direct prompt for faster responses
+    if context.strip():
+        prompt = f"Based on this context: {context}\n\nQuestion: {question}\nProvide a concise answer:"
+    else:
+        prompt = f"Question: {question}\nProvide a helpful answer:"
 
     try:
         if stream:
             answer_chunks = []
-            for event in replicate.stream(GEMMA_MODEL_27B, input={"prompt": prompt}):
+            for event in replicate.stream(GEMMA_MODEL_7B, input={"prompt": prompt}):
                 if event.event == "output":
                     answer_chunks.append(str(event.data))
             answer_text = "".join(answer_chunks).strip()
             return {"answer": answer_text, "raw_response": answer_chunks}
 
-        # Blocking mode with fallback
+        # Use faster 7B model first, fallback to 27B only for complex cases
         try:
-            answer_text = _call_gemma(prompt, GEMMA_MODEL_27B)
-        except Exception as e:
-            logger.warning(f"⚠️ Gemma-27B failed, retrying with 7B: {e}")
             answer_text = _call_gemma(prompt, GEMMA_MODEL_7B)
+        except Exception as e:
+            logger.warning(f"⚠️ Gemma-7B failed, retrying with 27B: {e}")
+            answer_text = _call_gemma(prompt, GEMMA_MODEL_27B)
 
         if answer_text:
             return {"answer": answer_text.strip(), "raw_response": answer_text}
@@ -178,7 +182,7 @@ def ask_gemma3(question: str, context: str = "", stream: bool = False) -> dict:
         logger.error(f"❌ Gemma API failed: {str(e)}")
         return {"answer": "⚠️ Error contacting Gemma API.", "raw_response": str(e)}
 
-async def ask_gemma3_async(question: str, context: str = "", timeout: int = 500) -> dict:
+async def ask_gemma3_async(question: str, context: str = "", timeout: int = 180) -> dict:
     """Async wrapper with timeout + error handling."""
     try:
         return await asyncio.wait_for(
@@ -199,7 +203,8 @@ async def process_question(
     question: str,
     db: AsyncSession,
     document_id: uuid.UUID,
-    user_id: uuid.UUID
+    user_id: uuid.UUID,
+    llm_provider: str = "gemma3"
 ):
     """RAG pipeline: search chunks → send to Gemma → save chat → return answer."""
 
@@ -209,13 +214,25 @@ async def process_question(
     chunks = await search_similar_chunks(question, db, document_id=document_id, user_id=user_id)
     context = "\n".join(chunks) if chunks else "No relevant content found in the document."
 
-    logger.info(f"📨 Context sent to Gemma (first 200 chars): {context[:200]}...")
+    logger.info(f"📨 Context sent to {llm_provider.upper()} (first 200 chars): {context[:200]}...")
 
-    # Call Gemma with timeout
+    # Call selected LLM with timeout
     try:
-        response = await ask_gemma3_async(question, context, timeout=180)
+        from api.service.llm_service import llm_service, LLMProvider
+        llm_provider_lower = llm_provider.lower()
+        if llm_provider_lower == "gemma3":
+            provider = LLMProvider.GEMMA3
+        elif llm_provider_lower == "gemini":
+            provider = LLMProvider.GEMINI
+        elif llm_provider_lower == "deepseek":
+            provider = LLMProvider.DEEPSEEK
+        elif llm_provider_lower == "gpt5":
+            provider = LLMProvider.GPT5
+        else:
+            provider = LLMProvider.GEMMA3  # Default fallback
+        response = await llm_service.ask_question_async(question, context, provider, timeout=180)
     except asyncio.TimeoutError:
-        logger.error("⚠️ Gemma request timed out")
+        logger.error(f"⚠️ {llm_provider.upper()} request timed out")
         return {
             "question": question,
             "answer": "⚠️ Request timed out. Please try again.",
@@ -251,3 +268,9 @@ async def process_question(
         "raw_response": raw_response,
         "elapsed_time": elapsed,
     }
+
+# ===================================================
+# SYNC VERSIONS FOR COMPATIBILITY
+# ===================================================
+
+

@@ -1,46 +1,46 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from api.config.core import settings
-from typing import AsyncGenerator
-import api.database.table_models 
 
 # ------------------------------------------------------
-# Create async PostgreSQL engine
+# Create sync PostgreSQL engine
 # ------------------------------------------------------
-engine = create_async_engine(
-    settings.DATABASE_URL,  # Example: postgresql+asyncpg://user:pass@localhost:5432/reparatur
-    echo=True,
+engine = create_engine(
+    settings.DATABASE_URL.replace("+asyncpg", ""),  # ensure sync driver
+    echo=False,  # Disabled for better performance
     future=True,
+    pool_size=10,          # Connection pool for better performance
+    max_overflow=20,       # Additional connections if needed
+    pool_pre_ping=True,    # Validate connections
+    pool_recycle=3600      # Refresh connections hourly
 )
 
 # ------------------------------------------------------
-# Create async session factory
+# Session factory
 # ------------------------------------------------------
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # ------------------------------------------------------
-# Base class for all ORM models
+# Base
 # ------------------------------------------------------
 Base = declarative_base()
 
 # ------------------------------------------------------
-# Async function to initialize DB tables
+# Init DB tables (sync)
 # ------------------------------------------------------
-async def init_db_tables() -> None:
+def init_db_tables() -> None:
     """
-    Create all tables asynchronously at startup.
+    Create all tables synchronously at startup.
     """
     import api.database.table_models  # register models
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    Base.metadata.create_all(bind=engine)
 
 # ------------------------------------------------------
-# Dependency for FastAPI to get async DB session
+# Dependency for FastAPI (sync session)
 # ------------------------------------------------------
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Provide an async SQLAlchemy session.
-    Automatically closes after the request.
-    """
-    async with async_session_maker() as session:
-        yield session
+def get_db():
+    db: Session = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

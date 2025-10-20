@@ -55,4 +55,11 @@ async def login_user(
             detail="Invalid username or password",
         )
 
-    return UserLoginOut(id=user.id, username=user.username)
+    return UserLoginOut(
+        id=user.id, 
+        username=user.username,
+        skill_level=user.skill_level,
+        physical_strength=user.physical_strength,
+        available_space=user.available_space,
+        experience_level=user.experience_level
+    )

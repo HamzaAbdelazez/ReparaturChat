@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     HUGGINGFACE_HUB_TOKEN: Optional[str] = None
     REPLICATE_API_TOKEN: Optional[str] = None
     GEMMA_API_KEY: Optional[str] = None  #  Required for Gemma 3 integration
+    GEMINI_API_KEY: Optional[str] = None  # Required for Google Gemini integration
 
     @model_validator(mode="after")
     def compute_database_url(self):
@@ -79,4 +80,3 @@ class Settings(BaseSettings):
 
 # Load settings globally
 settings = Settings()
-print("DEBUG TOKEN:", settings.REPLICATE_API_TOKEN)

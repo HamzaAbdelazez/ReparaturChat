@@ -1,35 +1,38 @@
-ARG DOCKER_REGISTRY
+# Use Python 3.12 slim for smaller image
+FROM python:3.12-slim
 
-# === Base image with dependencies
-FROM ${DOCKER_REGISTRY}python:3.12-bookworm AS base
-
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/root/.local/bin:$PATH"
 
-# System deps
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential libpq-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-ENV POETRY_VERSION=1.8.2
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
-# Add Poetry to PATH
-ENV PATH="/root/.local/bin:$PATH"
-
-
+# Set working directory
 WORKDIR /app
 
+# Copy dependency files
 COPY pyproject.toml poetry.lock* ./
+
+# Configure Poetry and install dependencies
 RUN poetry config virtualenvs.create false \
- && poetry install --no-root --no-interaction
+    && poetry install --no-root --no-interaction --no-dev
 
 # Copy application code
 COPY ./src ./src
 COPY ./tests ./tests
 
+# Set Python path
 ENV PYTHONPATH=/app/src
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose port
+EXPOSE 8000
+
+# Start command
+CMD ["uvicorn", "api.main:app", "--host", "localhost", "--port", "8000"]
