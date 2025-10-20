@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,9 +22,21 @@ logging.basicConfig(
 logger = logging.getLogger("api.main")
 
 # ------------------------------------------------------
+# Lifespan context manager for startup/shutdown events
+# ------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Initializing database tables")
+    init_db_tables()
+    yield
+    # Shutdown (if needed)
+    logger.info("Application shutdown")
+
+# ------------------------------------------------------
 # Create FastAPI application
 # ------------------------------------------------------
-app = FastAPI(title="Reparatur API")
+app = FastAPI(title="Reparatur API", lifespan=lifespan)
 
 # ------------------------------------------------------
 # Enable CORS (Cross-Origin Resource Sharing)
@@ -55,11 +68,4 @@ app.include_router(service_providers.router)
 app.include_router(llm_status.router)
 app.include_router(user_preferences.router)
 
-# ------------------------------------------------------
-# Startup event: initialize database tables asynchronously
-# ------------------------------------------------------
-@app.on_event("startup")
-def on_startup():
-    logger.info("Initializing database tables")
-    init_db_tables()
 

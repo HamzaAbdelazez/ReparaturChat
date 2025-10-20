@@ -20,6 +20,7 @@ class ChatBasedAnalysisRequest(BaseModel):
     problem_description: str
     chat_history: List[Dict[str, Any]] = []
     document_id: Optional[UUID] = None
+    llm_model: str = "gemma3"
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,8 @@ async def analyze_chat_based_problem(
             user_id=request.user_id,
             problem_description=request.problem_description,
             chat_history=request.chat_history,
-            document_id=request.document_id
+            document_id=request.document_id,
+            llm_model=request.llm_model
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

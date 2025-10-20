@@ -4,6 +4,7 @@ export const useChat = (userId, rating, uploadedPdf) => {
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("gemma3");
 
   // Send message
   const handleSend = useCallback(async (
@@ -66,6 +67,7 @@ export const useChat = (userId, rating, uploadedPdf) => {
         question: messageText,
         user_id: userId,
         user_level_rate: rating,
+        llm_model: selectedModel,
         ...(conversationId && { conversation_id: conversationId }),
         ...(uploadedPdf && { document_id: uploadedPdf.id }),
       });
@@ -97,7 +99,7 @@ export const useChat = (userId, rating, uploadedPdf) => {
     }
 
     return conversationId;
-  }, [question, userId, rating, uploadedPdf]);
+  }, [question, userId, rating, uploadedPdf, selectedModel]);
 
   const clearChatState = useCallback(() => {
     setHistory([]);
@@ -111,6 +113,8 @@ export const useChat = (userId, rating, uploadedPdf) => {
     setHistory,
     isLoading,
     handleSend,
-    clearChatState
+    clearChatState,
+    selectedModel,
+    setSelectedModel
   };
 };
