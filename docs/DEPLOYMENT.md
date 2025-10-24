@@ -515,17 +515,6 @@ docker compose ps
 - **Backend**: FastAPI automatic metrics at `/metrics`
 - **Database**: PostgreSQL query logs and pg_stat_statements
 
-## Production Deployment
-
-### Security Checklist
-
-- [ ] Change default database passwords
-- [ ] Use HTTPS with SSL certificates
-- [ ] Configure firewall rules
-- [ ] Set up API rate limiting
-- [ ] Enable CORS properly
-- [ ] Use secrets management (not .env files)
-- [ ] Regular security updates
 
 ### Scaling Considerations
 

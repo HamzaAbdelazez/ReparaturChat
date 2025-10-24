@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database with pgvector (for backend development)
   database:
     image: pgvector/pgvector:pg15
     container_name: reparatur_db_dev

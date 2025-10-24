@@ -1,135 +1,146 @@
-# Reparatur Platform
+# ReparaturApp - AI-Powered Repair Platform
 
-An AI-powered repair analysis platform that provides cost estimation, feasibility assessment, and tool recommendations for device repairs.
+An intelligent repair assistance platform that combines Retrieval-Augmented Generation (RAG) with multiple Large Language Models to provide precise, contextual repair guidance. The system analyzes uploaded repair manuals and provides cost estimation, feasibility assessment, and tool recommendations for device repairs.
 
-## 🏗️ Project Structure
+##  Project Structure
 
 ```
-reparatur-platform/
+Reparatur/
 ├── backend/                    # FastAPI backend service
+│   ├── src/api/
+│   │   ├── config/            # Database setup and configuration
+│   │   ├── database/          # PostgreSQL models and repositories
+│   │   ├── models/            # Pydantic data models
+│   │   ├── routers/           # API endpoints (REST routes)
+│   │   ├── service/           # Business logic and AI integration
+│   │   └── shared/            # Shared utilities and helpers
+│   ├── tests/                 # Backend test suite
+│   ├── Dockerfile             # Backend container configuration
+│   ├── pyproject.toml         # Python dependencies (Poetry)
+│   ├── requirements.txt       # Pip fallback dependencies
+│   └── docker-compose.yml     # Database-only setup for development
+├── frontend/                  # React frontend application
 │   ├── src/
-│   │   └── api/
-│   │       ├── config/        # Configuration and database setup
-│   │       ├── database/      # Database models and repositories
-│   │       ├── models/        # Pydantic models
-│   │       ├── routers/       # API endpoints
-│   │       ├── service/       # Business logic
-│   │       └── shared/        # Shared utilities
-│   ├── tests/                 # Backend tests
-│   ├── Dockerfile
-│   ├── pyproject.toml         # Python dependencies
-│   └── README.md
-├── frontend/                   # React frontend application
-│   ├── src/
-│   │   ├── components/        # React components
+│   │   ├── components/        # Reusable React components
 │   │   ├── hooks/            # Custom React hooks
-│   │   ├── pages/            # Page components
-│   │   ├── services/         # API services
-│   │   └── utils/            # Utility functions
-│   ├── public/               # Static assets
+│   │   ├── pages/            # Main page components
+│   │   ├── services/         # API client services
+│   │   ├── utils/            # Utility functions
+│   │   └── i18n/             # Internationalization (German/English)
+│   ├── Dockerfile            # Frontend container (React + Nginx)
 │   ├── package.json          # Node.js dependencies
-│   └── README.md
-├── docs/                      # Project documentation
-├── docker-compose.yml         # Full-stack Docker setup
-├── package.json              # Root package.json for scripts
-└── README.md                 # This file
+│   ├── vite.config.js        # Vite build configuration
+│   └── tailwind.config.js    # TailwindCSS configuration
+├── scripts/                  # Deployment and setup scripts
+│   ├── install.sh/.bat       # Automated installation
+│   └── run.sh/.bat           # Application startup scripts
+├── docs/                     # Documentation
+│   ├── DEPLOYMENT_GUIDE.md   # Complete deployment guide
+│   └── CODE_STRUCTURE.md     # Code organization guide
+├── docker-compose.yml        # Full-stack container orchestration
+├── package.json             # Root scripts and concurrency management
+├── .env.example             # Environment variables template
+└── README.md               
 ```
 
-## 🚀 Quick Start
+##  Quick Start
 
-### Prerequisites
+### Option 1: Automated Installation (Recommended)
 
-- **Node.js** (≥18.0.0)
-- **Python** (≥3.11)
-- **Poetry** (for Python dependency management)
-- **Docker** (optional, for containerized deployment)
+```bash
+# Linux/macOS
+./scripts/install.sh
 
-### Setup
+# Windows
+scripts\install.bat
 
-1. **Clone the repository**
+# Then start the application
+./scripts/run.sh        # Linux/macOS
+scripts\run.bat         # Windows
+```
+
+### Option 2: Manual Setup
+
+#### Prerequisites
+- **Docker Desktop** (for containerized deployment)
+- **Python 3.10+** (for backend development)
+- **Node.js 18+** (for frontend development)
+- **Poetry** (Python dependency management)
+
+#### Installation Steps
+
+1. **Clone and setup environment**
    ```bash
    git clone <repository-url>
-   cd reparatur-platform
+   cd Reparatur
+   cp .env.example .env
+   # Edit .env with your API keys
    ```
 
 2. **Install dependencies**
    ```bash
-   npm run setup
+   # Root dependencies
+   npm install
+   
+   # Backend dependencies
+   cd backend && poetry install && cd ..
+   
+   # Frontend dependencies  
+   cd frontend && npm install && cd ..
    ```
 
-3. **Start the development servers**
+3. **Start the application**
    ```bash
-   npm run dev
+   # Full stack with Docker
+   docker compose up --build
+   
+   # Access the application
+   # Frontend: http://localhost:3000
+   # Backend API: http://localhost:8000
+   # API Docs: http://localhost:8000/docs
    ```
 
-   This will start:
-   - Backend API at `http://localhost:8000`
-   - Frontend at `http://localhost:5173`
+##  Development Modes
 
-### Docker Setup (Alternative)
-
+### Full Stack Development
 ```bash
-# Start all services
-docker-compose up -d
+# Start all services (database + backend + frontend)
+./scripts/run.sh                    # Linux/macOS
+scripts\run.bat                     # Windows
 
-# Stop all services
-docker-compose down
+# With forced rebuild
+./scripts/run.sh --rebuild
 ```
 
-## 🛠️ Development
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start both frontend and backend in development mode |
-| `npm run dev:frontend` | Start only the frontend |
-| `npm run dev:backend` | Start only the backend |
-| `npm run build` | Build the frontend for production |
-| `npm run test` | Run tests for both frontend and backend |
-| `npm run lint` | Lint both frontend and backend code |
-| `npm run docker:up` | Start services with Docker |
-| `npm run setup` | Install all dependencies |
-
-### Backend Development
-
+### Backend Development Only
 ```bash
+# Start only database for backend development
 cd backend
-poetry install                    # Install dependencies
-poetry run uvicorn api.main:app --app-dir src --reload  # Start dev server
-poetry run pytest                 # Run tests
-poetry run ruff check .           # Lint code
+docker compose up
+
+# Run backend manually
+poetry run uvicorn api.main:app --reload --app-dir src
 ```
 
-### Frontend Development
-
+### Frontend Development Only
 ```bash
 cd frontend
-npm install                       # Install dependencies
-npm run dev                       # Start dev server
-npm run build                     # Build for production
-npm run lint                      # Lint code
+npm run dev
+# Runs on http://localhost:5173
 ```
 
-## 🗄️ Database
+##  Database & Environment
 
-The platform uses PostgreSQL with pgvector extension for vector storage and similarity search.
+### PostgreSQL with pgvector
+The platform uses PostgreSQL with the pgvector extension for:
+- **Document storage**: PDF content and metadata
+- **Vector embeddings**: Semantic search capabilities
+- **User management**: Authentication and conversation history
 
-### Database Setup
+### Required Environment Variables
 
-1. **Using Docker (Recommended)**
-   ```bash
-   docker-compose up database
-   ```
+Create `.env` file (copy from `.env.example`):
 
-2. **Manual Setup**
-   - Install PostgreSQL with pgvector extension
-   - Create database: `reparatur`
-   - Update connection details in `backend/.env`
-
-### Environment Variables
-
-Create `backend/.env`:
 ```env
 # Database Configuration
 POSTGRES_USER=test
@@ -138,49 +149,164 @@ POSTGRES_DB=reparatur
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 
-# API Tokens
-HUGGINGFACE_HUB_TOKEN=your_token_here
-GEMINI_API_KEY=your_key_here
-REPLICATE_API_TOKEN=your_token_here
+# AI Model API Keys (get from respective providers)
+GEMINI_API_KEY=your_actual_gemini_key
+REPLICATE_API_TOKEN=your_actual_replicate_token  
+OPENAI_API_KEY=your_actual_openai_key
+DEEPSEEK_API_KEY=your_actual_deepseek_key
 ```
 
-## 🔧 Features
+### API Key Sources
+| Provider | Get API Key | Purpose |
+|----------|-------------|---------|
+| [Google AI (Gemini)](https://makersuite.google.com/app/apikey) | Advanced reasoning | Free tier available |
+| [Replicate](https://replicate.com/account/api-tokens) | Gemma-3 models | Pay-per-use |
+| [OpenAI](https://platform.openai.com/api-keys) | GPT-4 integration | Pay-per-use |
+| [DeepSeek](https://platform.deepseek.com) | Alternative LLM | Competitive pricing |
 
-- **AI-Powered Analysis**: Leverages multiple LLM models for repair analysis
-- **Cost Estimation**: Provides detailed cost breakdowns for repairs
-- **Tool Recommendations**: Suggests appropriate tools and parts
-- **Multi-language Support**: Available in English and German
-- **Document Upload**: PDF upload and processing for repair manuals
-- **Conversation History**: Track and manage repair analysis sessions
+##  AI Features
 
-## 🏛️ Architecture
+### Multi-Model LLM Support
+- **Manual Model Selection**: Users choose between Gemma-3, GPT-4, Gemini, DeepSeek
+- **RAG Integration**: Document-grounded responses using uploaded repair manuals
+- **Semantic Search**: pgvector-powered context retrieval
+- **Safety-First**: Built-in safety prompts and guidelines
 
-- **Frontend**: React 18 with Vite, TailwindCSS, and React Router
-- **Backend**: FastAPI with async support, SQLAlchemy ORM
-- **Database**: PostgreSQL with pgvector for semantic search
-- **AI Integration**: Hugging Face, Google Gemini, Replicate APIs
-- **Containerization**: Docker and Docker Compose
+### Repair Analysis Capabilities
+- **Device Recognition**: Automatic device detection from conversations
+- **Cost Estimation**: DIY vs professional repair cost analysis
+- **Feasibility Assessment**: User skill level vs repair complexity matching
+- **Tool Requirements**: Specific tool and parts recommendations
+- **Safety Warnings**: Context-aware safety considerations
 
-## 📚 API Documentation
+##  Architecture Overview
 
-Once the backend is running, visit:
-- **Interactive API Docs**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │   Database      │
+│   (React)       │◄──►│   (FastAPI)     │◄──►│  (PostgreSQL)   │
+│   Port: 3000    │    │   Port: 8000    │    │   Port: 5432    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+        │                       │                       │
+        │                       ▼                       │
+        │              ┌─────────────────┐               │
+        │              │   AI Services   │               │
+        └──────────────┤  (Multiple LLMs) │───────────────┘
+                       └─────────────────┘
+```
 
-## 🤝 Contributing
+### Technology Stack
+- **Frontend**: React 18, TailwindCSS, Vite, i18next
+- **Backend**: FastAPI, SQLAlchemy, asyncio, Poetry
+- **Database**: PostgreSQL 15 + pgvector extension
+- **AI Integration**: Google AI, OpenAI, Replicate, DeepSeek APIs
+- **Deployment**: Docker, Docker Compose, Nginx
+- **Languages**: English, German (i18next)
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit changes: `git commit -am 'Add new feature'`
-4. Push to branch: `git push origin feature/new-feature`
-5. Submit a pull request
+## 📚 Available Scripts
 
-## 📄 License
+### Root Level Scripts
+```bash
+npm run dev          # Start both frontend and backend concurrently
+npm run build        # Build frontend for production
+npm run test         # Run all tests (frontend + backend)
+npm run lint         # Lint all code
+npm run docker:up    # Start with Docker
+npm run docker:down  # Stop Docker containers
+```
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Backend Scripts
+```bash
+cd backend
+poetry run uvicorn api.main:app --reload --app-dir src  # Dev server
+poetry run pytest                                        # Run tests
+poetry run black .                                       # Format code
+poetry run ruff check .                                  # Lint code
+```
 
-## 🔗 Links
+### Frontend Scripts
+```bash
+cd frontend
+npm run dev          # Development server (Vite)
+npm run build        # Production build
+npm run preview      # Preview production build
+npm run lint         # ESLint checking
+```
 
-- [Frontend README](./frontend/README.md)
-- [Backend README](./backend/README.md)
-- [Documentation](./docs/)
+##  Development Tools
+
+### API Documentation
+- **Interactive Docs**: http://localhost:8000/docs (Swagger UI)
+- **ReDoc**: http://localhost:8000/redoc (Alternative API docs)
+
+### Database Access
+```bash
+# Connect to database container
+docker exec -it reparatur_database psql -U test -d reparatur
+
+# View tables
+\dt
+
+# View vector similarity queries
+SELECT * FROM document_chunks ORDER BY embedding <-> '[vector_here]' LIMIT 5;
+```
+
+### Monitoring & Debugging
+```bash
+# View Docker logs
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# Monitor resource usage
+docker stats
+```
+
+##  Production Deployment
+
+### Performance Optimizations
+- **Docker multi-stage builds** for minimal image sizes
+- **Nginx** for efficient static file serving
+- **Poetry** for reproducible Python environments
+- **pgvector indexing** for fast semantic search
+- **Connection pooling** for database efficiency
+
+### Security Features
+- **JWT authentication** for secure user sessions
+- **Input validation** on frontend and backend
+- **CORS configuration** for cross-origin security
+- **Environment variable isolation** for secrets
+- **Rate limiting** for API protection
+
+##  Contributing
+
+1. **Fork the repository**
+2. **Create feature branch**: `git checkout -b feature/amazing-feature`
+3. **Follow code standards**: Use provided linting and formatting tools
+4. **Add tests**: Ensure new features have appropriate test coverage
+5. **Update documentation**: Keep README and docs current
+6. **Submit pull request**: Include detailed description of changes
+
+### Code Quality Standards
+- **Python**: Black formatting, Ruff linting, type hints
+- **JavaScript**: ESLint, Prettier, consistent component structure
+- **Commits**: Conventional commit messages
+- **Tests**: Maintain >80% coverage for critical paths
+
+##  Project Status
+
+-  **Core Features**: Multi-model AI integration, RAG pipeline
+-  **User Interface**: Responsive React frontend with i18n
+-  **Backend API**: FastAPI with comprehensive endpoints
+-  **Database**: PostgreSQL with vector search capabilities
+-  **Deployment**: Docker containerization with scripts
+-  **Documentation**: Complete setup and deployment guides
+
+##  Support
+
+For issues, questions, or contributions:
+- **Issues**: Open GitHub issues for bugs or feature requests
+- **Documentation**: Check the `/docs` folder for detailed guides
+- **Code Review**: All pull requests welcome with proper testing
+
+---
+
