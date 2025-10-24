@@ -62,7 +62,8 @@ class LLMService:
         context: str = "", 
         provider: LLMProvider = LLMProvider.GEMMA3,
         stream: bool = False,
-        include_tools_parts: bool = True
+        include_tools_parts: bool = True,
+        is_repair_question: bool = False
     ) -> Dict[str, Any]:
         """
         Ask a question using the specified LLM provider.
@@ -79,7 +80,7 @@ class LLMService:
         try:
             # Get the basic response from the LLM
             if provider == LLMProvider.GEMMA3:
-                response = self._ask_gemma3(question, context, stream)
+                response = self._ask_gemma3(question, context, stream, is_repair_question)
             elif provider == LLMProvider.GEMINI:
                 # Check if Gemini is actually available before calling
                 if not self.is_provider_available(provider):
@@ -87,11 +88,11 @@ class LLMService:
                         "answer": "WARNING: Gemini is not available. Please check your API key configuration or use Gemma3 instead.",
                         "raw_response": "Provider not available"
                     }
-                response = self._ask_gemini(question, context)
+                response = self._ask_gemini(question, context, is_repair_question)
             elif provider == LLMProvider.DEEPSEEK:
-                response = self._ask_deepseek(question, context)
+                response = self._ask_deepseek(question, context, is_repair_question)
             elif provider == LLMProvider.GPT5:
-                response = self._ask_gpt5(question, context)
+                response = self._ask_gpt5(question, context, is_repair_question)
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
             
@@ -123,12 +124,13 @@ class LLMService:
         question: str, 
         context: str = "", 
         provider: LLMProvider = LLMProvider.GEMMA3,
-        timeout: int = 120
+        timeout: int = 120,
+        is_repair_question: bool = True  # PDF uploads are typically repair-related
     ) -> Dict[str, Any]:
         """Async wrapper for ask_question with timeout."""
         try:
             return await asyncio.wait_for(
-                asyncio.to_thread(self.ask_question, question, context, provider),
+                asyncio.to_thread(self.ask_question, question, context, provider, False, True, is_repair_question),
                 timeout=timeout
             )
         except asyncio.TimeoutError:
@@ -138,7 +140,7 @@ class LLMService:
             logger.exception(f"❌ Unexpected error in {provider.value} async: {e}")
             return {"answer": f"⚠️ Error contacting {provider.value} API.", "raw_response": str(e)}
     
-    def _ask_gemma3(self, question: str, context: str = "", stream: bool = False) -> Dict[str, Any]:
+    def _ask_gemma3(self, question: str, context: str = "", stream: bool = False, is_repair_question: bool = False) -> Dict[str, Any]:
         """Ask Gemma-3 via Replicate API."""
         if not hasattr(self, 'replicate_client'):
             raise RuntimeError("Replicate API not configured")
@@ -147,9 +149,11 @@ class LLMService:
         if len(context) > MAX_CONTEXT_CHARS:
             context = context[:MAX_CONTEXT_CHARS]
         
-        # Build prompt
-        if context.strip():
-            prompt = f"""You are a helpful repair assistant. Based on the following context, please answer the user's question using markdown formatting for better readability.
+        # Build prompt based on whether it's repair-related
+        if is_repair_question:
+            # Repair-specific prompts with tools/parts requirements
+            if context.strip():
+                prompt = f"""You are a helpful repair assistant. Based on the following context, please answer the user's question using markdown formatting for better readability.
 
 Context: {context}
 
@@ -174,8 +178,8 @@ IMPORTANT: At the end of your response, please include a structured section for 
 - Provide rough cost estimates if possible
 
 Answer:"""
-        else:
-            prompt = f"""You are a helpful repair assistant. Please answer the following question using markdown formatting for better readability.
+            else:
+                prompt = f"""You are a helpful repair assistant. Please answer the following question using markdown formatting for better readability.
 
 Question: {question}
 
@@ -196,6 +200,26 @@ IMPORTANT: At the end of your response, please include a structured section for 
 
 **Estimated Cost:**
 - Provide rough cost estimates if possible
+
+Answer:"""
+        else:
+            # General conversation prompts - friendly and natural
+            if context.strip():
+                prompt = f"""You are a helpful and friendly assistant. Based on the following context, please answer the user's question naturally and conversationally.
+
+Context: {context}
+
+Question: {question}
+
+Please provide a helpful and friendly response. Keep it natural and conversational.
+
+Answer:"""
+            else:
+                prompt = f"""You are a helpful and friendly assistant. Please answer the following question naturally and conversationally.
+
+Question: {question}
+
+Please provide a helpful and friendly response. Keep it natural and conversational.
 
 Answer:"""
         
@@ -225,7 +249,7 @@ Answer:"""
         """Runtime check for Gemini availability."""
         return hasattr(self, 'gemini_configured') and self.gemini_configured
     
-    def _ask_gemini(self, question: str, context: str = "") -> Dict[str, Any]:
+    def _ask_gemini(self, question: str, context: str = "", is_repair_question: bool = False) -> Dict[str, Any]:
         """Ask Gemini via Google AI API using direct HTTP requests."""
         # Double-check availability at runtime
         if not self._check_gemini_availability():
@@ -235,10 +259,11 @@ Answer:"""
         if len(context) > MAX_CONTEXT_CHARS:
             context = context[:MAX_CONTEXT_CHARS]
         
-        # Build content according to our project needs - repair assistant context
-        if context.strip():
-            # For repair-related questions with PDF context
-            prompt_text = f"""You are a helpful repair assistant. Based on the following repair manual context, please answer the user's question clearly and concisely using markdown formatting to make your response well-structured and easy to read.
+        # Build content based on whether it's repair-related
+        if is_repair_question:
+            if context.strip():
+                # For repair-related questions with PDF context
+                prompt_text = f"""You are a helpful repair assistant. Based on the following repair manual context, please answer the user's question clearly and concisely using markdown formatting to make your response well-structured and easy to read.
 
 Context from repair manual:
 {context}
@@ -271,9 +296,9 @@ IMPORTANT: At the end of your response, please include a structured section for 
 - Provide rough cost estimates if possible
 
 Answer:"""
-        else:
-            # For general repair questions without specific context
-            prompt_text = f"""You are a helpful repair assistant. Please answer the following question about device repair, maintenance, or troubleshooting using markdown formatting to make your response well-structured and easy to read.
+            else:
+                # For general repair questions without specific context
+                prompt_text = f"""You are a helpful repair assistant. Please answer the following question about device repair, maintenance, or troubleshooting using markdown formatting to make your response well-structured and easy to read.
 
 Question: {question}
 
@@ -301,6 +326,26 @@ IMPORTANT: At the end of your response, please include a structured section for 
 
 **Estimated Cost:**
 - Provide rough cost estimates if possible
+
+Answer:"""
+        else:
+            # General conversation prompts - friendly and natural
+            if context.strip():
+                prompt_text = f"""You are a helpful and friendly assistant. Based on the following context, please answer the user's question naturally and conversationally.
+
+Context: {context}
+
+Question: {question}
+
+Please provide a helpful and friendly response. Keep it natural and conversational.
+
+Answer:"""
+            else:
+                prompt_text = f"""You are a helpful and friendly assistant. Please answer the following question naturally and conversationally.
+
+Question: {question}
+
+Please provide a helpful and friendly response. Keep it natural and conversational.
 
 Answer:"""
         
@@ -429,7 +474,7 @@ Answer:"""
             logger.error(f"Gemini API failed: {str(e)}")
             raise
     
-    def _ask_deepseek(self, question: str, context: str = "") -> Dict[str, Any]:
+    def _ask_deepseek(self, question: str, context: str = "", is_repair_question: bool = False) -> Dict[str, Any]:
         """Ask DeepSeek-R1 via Replicate API."""
         if not hasattr(self, 'replicate_client'):
             raise RuntimeError("Replicate API not configured")
@@ -559,7 +604,7 @@ Please ensure your response is complete and doesn't get cut off. Prioritize the 
                 "raw_response": str(e)
             }
     
-    def _ask_gpt5(self, question: str, context: str = "") -> Dict[str, Any]:
+    def _ask_gpt5(self, question: str, context: str = "", is_repair_question: bool = False) -> Dict[str, Any]:
         """Ask GPT-5 via Replicate API using correct format."""
         if not hasattr(self, 'replicate_client'):
             raise RuntimeError("Replicate API not configured")

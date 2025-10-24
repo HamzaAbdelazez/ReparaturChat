@@ -1,9 +1,34 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export const useConversations = (userId) => {
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Load current conversation from localStorage on mount
+  useEffect(() => {
+    if (userId) {
+      const stored = localStorage.getItem(`currentConversation_${userId}`);
+      if (stored) {
+        try {
+          const parsedId = JSON.parse(stored);
+          setCurrentConversationId(parsedId);
+        } catch (error) {
+          console.warn("Invalid stored conversation ID");
+          localStorage.removeItem(`currentConversation_${userId}`);
+        }
+      }
+    }
+  }, [userId]);
+
+  // Save current conversation to localStorage whenever it changes
+  useEffect(() => {
+    if (userId && currentConversationId) {
+      localStorage.setItem(`currentConversation_${userId}`, JSON.stringify(currentConversationId));
+    } else if (userId) {
+      localStorage.removeItem(`currentConversation_${userId}`);
+    }
+  }, [userId, currentConversationId]);
 
   // Load conversations
   const loadConversations = useCallback(async (id) => {

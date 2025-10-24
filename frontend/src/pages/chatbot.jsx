@@ -23,7 +23,7 @@ function ReparaturApp() {
   const { t } = useTranslation();
 
   // Custom Hooks
-  const { userId, rating, handleSignOut } = useAuth();
+  const { userId, rating, isLoading: authLoading, isAuthenticated, handleSignOut } = useAuth();
   const {
     conversations,
     currentConversationId,
@@ -194,9 +194,21 @@ function ReparaturApp() {
   };
 
 
-  // Don't render until user is loaded
-  if (!userId) {
-    return null; // or a loading spinner
+  // Show loading state while authentication is being checked
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated()) {
+    return null;
   }
 
   return (

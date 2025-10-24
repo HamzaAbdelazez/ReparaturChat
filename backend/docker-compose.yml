@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  database:
+    image: pgvector/pgvector:pg15
+    container_name: reparatur_db_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-test}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-reparatur}
+    ports:
+      - "5432:5432"
+    volumes:
+      - reparatur_db_data:/var/lib/postgresql/data
+      - ./src/api/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-test} -d ${POSTGRES_DB:-reparatur}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  reparatur_db_data:

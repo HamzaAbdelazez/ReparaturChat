@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from pgvector.sqlalchemy import Vector
-from api.config.db import Base  # import Base from db.py
+from api.config.db import Base  
 
 
 # ================= USERS =================
@@ -131,11 +131,11 @@ class ChatMessage(Base):
         ForeignKey("uploaded_pdfs.id", ondelete="CASCADE"),
         nullable=True
     )
-    role: Mapped[str] = mapped_column(String(20))  # "user" or "assistant"
+    role: Mapped[str] = mapped_column(String(20)) 
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),  # store with timezone
+        default=lambda: datetime.now(timezone.utc),  
         nullable=False
     )
 
@@ -151,7 +151,6 @@ class ChatMessage(Base):
 
 # ================= DOCUMENT TOOLS & PARTS =================
 
-#     """Stores required tools & parts for each uploaded PDF."""
 
 class Tool(Base):
     """Tools table - stores info about tools, prices, and reusability."""
@@ -167,9 +166,9 @@ class Tool(Base):
     min_price: Mapped[float] = mapped_column(Float, nullable=True)
     max_price: Mapped[float] = mapped_column(Float, nullable=True)
 
-    # how reusable is this tool? (e.g., number of times, or score)
+    
     reusability_score: Mapped[int] = mapped_column(Integer, nullable=True)  
-    # Example: 1 = one-time use, 5 = reusable many times
+    
     
     # tool category for organization
     category: Mapped[str] = mapped_column(String(length=100), nullable=True)
@@ -238,7 +237,6 @@ class UserDevice(Base):
 
 # ================= SERVICE PROVIDERS =================
 class ServiceProvider(Base):
-    """Professional repair service providers for US28, US29, US30."""
     __tablename__ = "service_providers"
     
     id: Mapped[uuid.UUID] = mapped_column(
@@ -256,7 +254,6 @@ class ServiceProvider(Base):
 
 # ================= TOOL PRICING =================
 class ToolPrice(Base):
-    """Tool pricing from different vendors."""
     __tablename__ = "tool_prices"
     
     id: Mapped[uuid.UUID] = mapped_column(

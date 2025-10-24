@@ -22,11 +22,10 @@ COPY pyproject.toml poetry.lock* ./
 
 # Configure Poetry and install dependencies
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction --no-dev
+    && poetry install --no-root --no-interaction --without dev
 
 # Copy application code
 COPY ./src ./src
-COPY ./tests ./tests
 
 # Set Python path
 ENV PYTHONPATH=/app/src
@@ -35,4 +34,4 @@ ENV PYTHONPATH=/app/src
 EXPOSE 8000
 
 # Start command
-CMD ["uvicorn", "api.main:app", "--host", "localhost", "--port", "8000"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

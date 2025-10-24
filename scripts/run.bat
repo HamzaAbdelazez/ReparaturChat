@@ -1,7 +1,10 @@
 @echo off
 REM ============================================
 REM ReparaturApp Startup Script - Windows
+REM Enhanced with Docker optimization
 REM ============================================
+
+setlocal enabledelayedexpansion
 
 echo.
 echo ============================================
@@ -9,21 +12,36 @@ echo       ReparaturApp - Windows Startup
 echo ============================================
 echo.
 
-REM Check if Python is installed
-python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Python is not installed or not in PATH
-    echo Please install Python 3.10+ from python.org
-    pause
-    exit /b 1
-)
+REM Configuration
+set "COMPOSE_FILE=docker-compose.yml"
+set "FORCE_REBUILD=false"
+set "PARALLEL_BUILD=false"
 
-REM Check if Node.js is installed
-node --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Node.js is not installed or not in PATH
-    echo Please install Node.js from nodejs.org
-    pause
+REM Parse command line arguments
+:parse_args
+if "%1"=="--rebuild" (
+    set "FORCE_REBUILD=true"
+    shift
+    goto parse_args
+)
+if "%1"=="--parallel" (
+    set "PARALLEL_BUILD=true"
+    shift
+    goto parse_args
+)
+if "%1"=="--help" (
+    echo Usage: %0 [OPTIONS]
+    echo Options:
+    echo   --rebuild   Force rebuild of Docker images
+    echo   --parallel  Build images in parallel
+    echo   --help      Show this help message
+    echo.
+    echo For backend development only:
+    echo   cd backend ^&^& docker compose up
+    exit /b 0
+)
+if not "%1"=="" (
+    echo ERROR: Unknown option: %1
     exit /b 1
 )
 
@@ -36,86 +54,68 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [1/6] Starting PostgreSQL database with Docker...
-cd backend
-docker compose up -d
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to start database
-    pause
-    exit /b 1
+echo INFO: Configuration: Full stack deployment (%COMPOSE_FILE%)
+
+REM Navigate to project root
+cd /d "%~dp0\.."
+
+REM Build options
+set "BUILD_ARGS=--build"
+if "%FORCE_REBUILD%"=="true" (
+    set "BUILD_ARGS=--build --no-cache"
+    echo INFO: Force rebuild enabled - this will take longer
+) else if "%PARALLEL_BUILD%"=="true" (
+    set "BUILD_ARGS=--build --parallel"
+    echo INFO: Parallel build enabled
 )
 
-echo [2/6] Installing Python dependencies...
-REM Check if poetry is installed
-poetry --version >nul 2>&1
+echo [1/3] Building and starting Docker services...
+echo INFO: Using compose file: %COMPOSE_FILE%
+
+REM Start services
+echo INFO: Starting full stack application...
+docker compose -f "%COMPOSE_FILE%" up -d %BUILD_ARGS%
+
 if %errorlevel% equ 0 (
-    echo Using Poetry for dependency management...
-    poetry install
-    if %errorlevel% neq 0 (
-        echo ERROR: Poetry install failed
-        pause
-        exit /b 1
+    echo [2/3] Waiting for services to be ready...
+    timeout /t 10 /nobreak >nul
+    
+    echo [3/3] Checking service health...
+    docker compose -f "%COMPOSE_FILE%" ps | findstr "Up" >nul
+    if %errorlevel% equ 0 (
+        echo SUCCESS: Services are running!
+    ) else (
+        echo WARNING: Some services might still be starting...
     )
-    set PYTHON_CMD=poetry run python
+    
+    echo.
+    echo ============================================
+    echo         ReparaturApp Started Successfully!
+    echo ============================================
+    echo.
+    echo 🌐 Frontend: http://localhost:3000
+    echo 🚀 Backend API: http://localhost:8000
+    echo 📚 API Documentation: http://localhost:8000/docs
+    echo 🗄️  Database: PostgreSQL on localhost:5432
+    echo.
+    echo 💡 Tips:
+    echo    - Use 'docker compose logs -f' to view logs
+    echo    - Use 'docker compose down' to stop services
+    echo    - For backend development: 'cd backend ^&^& docker compose up'
+    echo.
+    echo SUCCESS: All services are running in the background!
+    echo Press any key to stop all services...
+    pause >nul
+    
+    echo.
+    echo Stopping services...
+    docker compose -f "%COMPOSE_FILE%" down
+    echo All services stopped.
+    
 ) else (
-    echo Poetry not found, using pip...
-    pip install -r requirements.txt
-    if %errorlevel% neq 0 (
-        echo ERROR: Pip install failed
-        pause
-        exit /b 1
-    )
-    set PYTHON_CMD=python
-)
-
-echo [3/6] Starting FastAPI backend server...
-start "Backend Server" cmd /k "cd /d %CD% && %PYTHON_CMD% -c \"import sys; sys.path.append('src'); import uvicorn; uvicorn.run('api.main:app', host='127.0.0.1', port=8000, reload=True)\""
-
-REM Wait for backend to start
-echo Waiting for backend to start...
-timeout /t 5 /nobreak >nul
-
-echo [4/6] Installing frontend dependencies...
-cd ..\frontend
-if not exist node_modules (
-    echo Installing npm packages...
-    npm install
-    if %errorlevel% neq 0 (
-        echo ERROR: npm install failed
-        pause
-        exit /b 1
-    )
-)
-
-echo [5/6] Building frontend...
-npm run build
-if %errorlevel% neq 0 (
-    echo ERROR: Frontend build failed
+    echo ERROR: Failed to start services
     pause
     exit /b 1
 )
 
-echo [6/6] Starting frontend development server...
-start "Frontend Server" cmd /k "npm run dev"
-
-echo.
-echo ============================================
-echo         ReparaturApp Started Successfully!
-echo ============================================
-echo.
-echo Backend API: http://127.0.0.1:8000
-echo API Documentation: http://127.0.0.1:8000/docs
-echo Frontend: http://localhost:5173
-echo.
-echo Press any key to stop all services...
-pause >nul
-
-echo.
-echo Stopping services...
-taskkill /f /im node.exe >nul 2>&1
-taskkill /f /im python.exe >nul 2>&1
-cd ..\backend
-docker compose down
-
-echo All services stopped.
 pause

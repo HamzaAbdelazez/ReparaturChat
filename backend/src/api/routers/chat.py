@@ -217,7 +217,12 @@ async def general_chat(
             provider = LLMProvider.GEMMA3  # Default fallback
         
         # Call selected LLM with conversation context
-        response = llm_service.ask_question(full_question, provider=provider)
+        response = llm_service.ask_question(
+            question=full_question, 
+            provider=provider,
+            is_repair_question=is_repair_question,
+            include_tools_parts=is_repair_question  # Only extract tools/parts for repair questions
+        )
         answer = response.get("answer", "No answer")
 
         # Save chat history (no document_id here)
