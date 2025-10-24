@@ -1,5 +1,7 @@
+version: '3.8'
+
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector
   database:
     image: pgvector/pgvector:pg15
     container_name: reparatur_database
@@ -15,6 +17,11 @@ services:
       - ./backend/src/api/database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - reparatur_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d reparatur"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # Backend API
   backend:
@@ -29,16 +36,18 @@ services:
       POSTGRES_DB: reparatur
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
+      # API Keys from .env file
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN}
     ports:
       - "8000:8000"
     depends_on:
-      - database
-    volumes:
-      - ./backend:/app
+      database:
+        condition: service_healthy
     networks:
       - reparatur_network
 
-  # Frontend (for production)
+  # Frontend 
   frontend:
     build:
       context: ./frontend

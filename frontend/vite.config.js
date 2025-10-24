@@ -6,6 +6,18 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    host: 'localhost'
+    host: 'localhost',
+    // Fix 404 errors on refresh for SPA routing
+    historyApiFallback: true
+  },
+  // Ensure proper base path handling
+  base: '/',
+  // Build configuration for SPA
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 })
