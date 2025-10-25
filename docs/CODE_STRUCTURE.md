@@ -195,7 +195,6 @@ Pydantic models for API serialization/validation:
 **Support Routes**
 | File | Purpose | Features |
 |------|---------|----------|
-| `llm_status.py` | AI service monitoring | Model availability, health checks |
 | `dependencies.py` | Route dependencies | Authentication, database sessions |
 | `setup.py` | Application setup | Initialization endpoints |
 

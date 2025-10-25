@@ -215,11 +215,21 @@ Please provide a helpful and friendly response. Keep it natural and conversation
 
 Answer:"""
             else:
-                prompt = f"""You are a helpful and friendly assistant. Please answer the following question naturally and conversationally.
+                # Simple washing machine greeting for simple greetings
+                if question.lower().strip() in ['hi', 'hello', 'hey', 'hola', 'greeting']:
+                    prompt = f"""You are a washing machine repair expert. The user just said "{question}". Respond with a brief, friendly greeting that asks about their washing machine issue.
+
+Give a short response like:
+
+Hi! I'm here to help with washing machine repairs. What's your washing machine issue? Please tell me your model and the specific problem you're experiencing.
+
+Answer:"""
+                else:
+                    prompt = f"""You are a washing machine repair expert. Please answer the following question naturally and conversationally, focusing on washing machine repairs.
 
 Question: {question}
 
-Please provide a helpful and friendly response. Keep it natural and conversational.
+Please provide a helpful and friendly response focused on washing machine repair and maintenance. Keep it natural and conversational.
 
 Answer:"""
         
@@ -341,11 +351,21 @@ Please provide a helpful and friendly response. Keep it natural and conversation
 
 Answer:"""
             else:
-                prompt_text = f"""You are a helpful and friendly assistant. Please answer the following question naturally and conversationally.
+                # Simple washing machine greeting for simple greetings
+                if question.lower().strip() in ['hi', 'hello', 'hey', 'hola', 'greeting']:
+                    prompt_text = f"""You are a washing machine repair expert. The user just said "{question}". Respond with a brief, friendly greeting that asks about their washing machine issue.
+
+Give a short response like:
+
+Hi! I'm here to help with washing machine repairs. What's your washing machine issue? Please tell me your model and the specific problem you're experiencing.
+
+Answer:"""
+                else:
+                    prompt_text = f"""You are a washing machine repair expert. Please answer the following question naturally and conversationally, focusing on washing machine repairs.
 
 Question: {question}
 
-Please provide a helpful and friendly response. Keep it natural and conversational.
+Please provide a helpful and friendly response focused on washing machine repair and maintenance. Keep it natural and conversational.
 
 Answer:"""
         
@@ -662,7 +682,17 @@ Please ensure your response is complete and doesn't get cut off. Prioritize the 
 
 Answer:"""
         else:
-            prompt_text = f"""You are an expert repair assistant. Provide a comprehensive answer to the repair question with proper cost analysis and clear labeling.
+            # Simple washing machine greeting for simple greetings
+            if question.lower().strip() in ['hi', 'hello', 'hey', 'hola', 'greeting']:
+                prompt_text = f"""You are a washing machine repair expert. The user just said "{question}". Respond with a brief, friendly greeting that asks about their washing machine issue.
+
+Give a short response like:
+
+Hi! I'm here to help with washing machine repairs. What's your washing machine issue? Please tell me your model and the specific problem you're experiencing.
+
+Answer:"""
+            else:
+                prompt_text = f"""You are a washing machine repair expert. Provide a comprehensive answer to the washing machine repair question with proper cost analysis and clear labeling.
 
 **User Question:** {question}
 
