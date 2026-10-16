@@ -1,4 +1,4 @@
-# ReparaturApp - AI-Powered Repair Platform
+# ReparaturChat - AI-Powered Repair Platform
 
 An intelligent repair assistance platform that combines Retrieval-Augmented Generation (RAG) with multiple Large Language Models to provide precise, contextual repair guidance. The system analyzes uploaded repair manuals and provides cost estimation, feasibility assessment, and tool recommendations for device repairs.
 
